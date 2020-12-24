@@ -78,6 +78,7 @@ type ReadableArgs struct {
 // replaced.
 func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map[string]io.Reader, error) {
 	images := make(map[string]io.Reader)
+	imgMapping := make(map[string]string)
 	var wg sync.WaitGroup
 	var counter int
 	node, err := n.readableRecursive(
@@ -87,6 +88,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		args.UserAgent,
 		args.ImagesDir,
 		images,
+		imgMapping,
 		&counter,
 	)
 	wg.Wait()
@@ -100,6 +102,7 @@ func (n *Node) readableRecursive(
 	userAgent string,
 	imagesDir string,
 	images map[string]io.Reader,
+	imgMapping map[string]string,
 	imgCounter *int,
 ) (*html.Node, error) {
 	if n == nil {
@@ -164,21 +167,28 @@ func (n *Node) readableRecursive(
 				return nil, nil
 			}
 			srcURL = baseURL.ResolveReference(srcURL)
-			*imgCounter++
-			filename := fmt.Sprintf("%03d", *imgCounter) + path.Ext(srcURL.Path)
-			filename = path.Join(imagesDir, filename)
-			newNode.Attr[srcIndex].Val = filename
-			buf := new(bytes.Buffer)
-			images[filename] = buf
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				downloadImage(ctx, srcURL, userAgent, buf)
-			}()
+			src := srcURL.String()
+			if filename, exists := imgMapping[src]; exists {
+				// This image url already appeared before, reuse the same local file.
+				newNode.Attr[srcIndex].Val = filename
+			} else {
+				*imgCounter++
+				filename = fmt.Sprintf("%03d", *imgCounter) + path.Ext(srcURL.Path)
+				filename = path.Join(imagesDir, filename)
+				newNode.Attr[srcIndex].Val = filename
+				imgMapping[src] = filename
+				buf := new(bytes.Buffer)
+				images[filename] = buf
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					downloadImage(ctx, srcURL, userAgent, buf)
+				}()
+			}
 		}
 		var iterationErr error
 		n.ForEachChild(func(c *Node) bool {
-			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgCounter)
+			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter)
 			if err != nil {
 				iterationErr = err
 				return false
