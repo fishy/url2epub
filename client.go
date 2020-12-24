@@ -32,17 +32,12 @@ var client = &http.Client{
 	},
 }
 
-// ChromeAndroidUserAgent is an User-Agent copied from Chrome Android.
-const ChromeAndroidUserAgent = `Mozilla/5.0 (Linux; Android 11; Pixel 4 XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.51 Mobile Safari/537.36`
-
 // GetArgs define the arguments used by Get function.
 type GetArgs struct {
 	// The HTTP GET URL, required.
 	URL string
 
 	// The User-Agent header to use, optional.
-	//
-	// ChromeAndroidUserAgent will be used if this is empty.
 	UserAgent string
 }
 
@@ -98,10 +93,9 @@ func get(ctx context.Context, src *url.URL, ua string) (io.ReadCloser, *url.URL,
 	*lastURL = src
 	ctx = context.WithValue(ctx, lastURLKey, lastURL)
 	req = req.WithContext(ctx)
-	if ua == "" {
-		ua = ChromeAndroidUserAgent
+	if ua != "" {
+		req.Header.Set("user-agent", ua)
 	}
-	req.Header.Set("user-agent", ua)
 
 	resp, err := client.Do(req)
 	if err != nil {
