@@ -1,7 +1,6 @@
 package url2epub
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -77,7 +76,7 @@ type ReadableArgs struct {
 // Readable strips node n into a readable one, with all images downloaded and
 // replaced.
 func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map[string]io.Reader, error) {
-	images := make(map[string]io.Reader)
+	imgPointers := make(map[string]*io.Reader)
 	imgMapping := make(map[string]string)
 	var wg sync.WaitGroup
 	var counter int
@@ -87,11 +86,21 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		args.BaseURL,
 		args.UserAgent,
 		args.ImagesDir,
-		images,
+		imgPointers,
 		imgMapping,
 		&counter,
 	)
 	wg.Wait()
+	images := make(map[string]io.Reader, len(imgPointers))
+	for k, v := range imgPointers {
+		var reader io.Reader
+		if v != nil && *v != nil {
+			reader = *v
+		} else {
+			reader = strings.NewReader("")
+		}
+		images[k] = reader
+	}
 	return node, images, err
 }
 
@@ -101,7 +110,7 @@ func (n *Node) readableRecursive(
 	baseURL *url.URL,
 	userAgent string,
 	imagesDir string,
-	images map[string]io.Reader,
+	images map[string]*io.Reader,
 	imgMapping map[string]string,
 	imgCounter *int,
 ) (*html.Node, error) {
@@ -177,12 +186,12 @@ func (n *Node) readableRecursive(
 				filename = path.Join(imagesDir, filename)
 				newNode.Attr[srcIndex].Val = filename
 				imgMapping[src] = filename
-				buf := new(bytes.Buffer)
-				images[filename] = buf
+				reader := new(io.Reader)
+				images[filename] = reader
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					downloadImage(ctx, srcURL, userAgent, buf)
+					downloadImage(ctx, srcURL, userAgent, reader)
 				}()
 			}
 		}
@@ -210,7 +219,7 @@ func (n *Node) readableRecursive(
 	}
 }
 
-func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest io.Writer) {
+func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader) {
 	req := setContextUserAgent(
 		ctx,
 		&http.Request{
@@ -224,6 +233,5 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest io.
 	if err != nil {
 		return
 	}
-	defer DrainAndClose(resp.Body)
-	io.Copy(dest, resp.Body)
+	*dest = resp.Body
 }

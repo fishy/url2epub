@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -90,6 +91,7 @@ func Epub(args EpubArgs) (id string, err error) {
 	var randomID uuid.UUID
 	randomID, err = uuid.NewRandom()
 	if err != nil {
+		err = fmt.Errorf("epub: unable to generate uuid: %w", err)
 		return
 	}
 	id = randomID.String()
@@ -102,45 +104,36 @@ func Epub(args EpubArgs) (id string, err error) {
 		}
 	}()
 
-	var writer io.Writer
-
 	// mimetype must be the first file in the zip
-	writer, err = z.Create(epubMimetypeFilename)
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(writer, strings.NewReader(epubMimetypeContent))
+	err = epubWriteFile(z, epubMimetypeFilename, stringWriterTo(epubMimetypeContent))
 	if err != nil {
 		return
 	}
 
-	writer, err = z.Create(epubContainerFilename)
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(writer, strings.NewReader(epubContainerContent))
+	err = epubWriteFile(z, epubContainerFilename, stringWriterTo(epubContainerContent))
 	if err != nil {
 		return
 	}
 
-	writer, err = z.Create(path.Join(epubContentDir, epubArticleFilename))
-	if err != nil {
-		return
-	}
-	err = html.Render(writer, args.Node)
+	err = epubWriteFile(
+		z,
+		path.Join(epubContentDir, epubArticleFilename),
+		writerToWrapper(func(w io.Writer) (int64, error) {
+			// NOTE: this does not return the correct n, but it's good enough for our
+			// use case.
+			return 0, html.Render(w, args.Node)
+		}),
+	)
 	if err != nil {
 		return
 	}
 
 	imageContentTypes := make(map[string]string, len(args.Images))
-	for filename, reader := range args.Images {
+	for f, reader := range args.Images {
 		err = func() (err error) {
+			filename := path.Join(epubContentDir, f)
 			if readCloser, ok := reader.(io.ReadCloser); ok {
 				defer DrainAndClose(readCloser)
-			}
-			writer, err = z.Create(path.Join(epubContentDir, filename))
-			if err != nil {
-				return
 			}
 			var buf []byte
 			if buffer, ok := reader.(*bytes.Buffer); ok {
@@ -149,35 +142,65 @@ func Epub(args EpubArgs) (id string, err error) {
 				r := bufio.NewReader(reader)
 				var peekErr error
 				buf, peekErr = r.Peek(contentTypePeekSize)
-				if peekErr != nil && peekErr != bufio.ErrBufferFull {
-					err = peekErr
+				if peekErr != nil && peekErr != io.EOF {
+					err = fmt.Errorf("epub: unable to detect content type for %q: %v", filename, peekErr)
 					return
 				}
 				reader = r
 			}
-			imageContentTypes[filename] = http.DetectContentType(buf)
-			_, err = io.Copy(writer, reader)
-			if err != nil {
-				return
-			}
-			return nil
+			imageContentTypes[f] = http.DetectContentType(buf)
+
+			return epubWriteFile(
+				z,
+				filename,
+				writerToWrapper(func(w io.Writer) (int64, error) {
+					return io.Copy(w, reader)
+				}),
+			)
 		}()
 		if err != nil {
 			return
 		}
 	}
 
-	writer, err = z.Create(epubOpfFullpath)
-	if err != nil {
-		return
-	}
-	err = epubOpfTmpl.Execute(writer, epubOpfData{
-		ID:          id,
-		Title:       args.Title,
-		Lang:        FromNode(args.Node).GetLang(),
-		Time:        time.Now().Format(time.RFC3339),
-		ArticlePath: epubArticleFilename,
-		Images:      imageContentTypes,
-	})
+	err = epubWriteFile(
+		z,
+		epubOpfFullpath,
+		writerToWrapper(func(w io.Writer) (int64, error) {
+			// NOTE: this does not return the correct n, but it's good enough for our
+			// use case.
+			return 0, epubOpfTmpl.Execute(w, epubOpfData{
+				ID:          id,
+				Title:       args.Title,
+				Lang:        FromNode(args.Node).GetLang(),
+				Time:        time.Now().Format(time.RFC3339),
+				ArticlePath: epubArticleFilename,
+				Images:      imageContentTypes,
+			})
+		}),
+	)
 	return
+}
+
+func epubWriteFile(z *zip.Writer, filename string, src io.WriterTo) error {
+	writer, err := z.Create(filename)
+	if err != nil {
+		return fmt.Errorf("epubWriteFile: unable to create %q: %w", filename, err)
+	}
+	if _, err := src.WriteTo(writer); err != nil {
+		return fmt.Errorf("epubWriteFile: unable to write %q: %w", filename, err)
+	}
+	return nil
+}
+
+type stringWriterTo string
+
+func (s stringWriterTo) WriteTo(w io.Writer) (int64, error) {
+	return io.Copy(w, strings.NewReader(string(s)))
+}
+
+type writerToWrapper func(w io.Writer) (int64, error)
+
+func (w writerToWrapper) WriteTo(writer io.Writer) (int64, error) {
+	return w(writer)
 }
