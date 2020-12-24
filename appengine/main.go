@@ -40,7 +40,7 @@ func main() {
 	if !root.IsAMP() {
 		ampURL := root.GetAMPurl()
 		if ampURL == "" {
-			log.Fatal("Unsupported URL")
+			log.Fatalf("Unsupported URL: %q", baseURL)
 		}
 		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetArgs{
 			URL: ampURL,
@@ -49,7 +49,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if !root.IsAMP() {
-			log.Fatal("Unsupported URL")
+			log.Fatal("Unsupported URL: %q", baseURL)
 		}
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
