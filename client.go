@@ -63,19 +63,14 @@ type GetArgs struct {
 // - The client used by Get does not have timeout set. It's expected that a
 // deadline is set in the ctx passed in.
 func GetHTML(ctx context.Context, args GetArgs) (*Node, *url.URL, error) {
-	if args.UserAgent == "" {
-		args.UserAgent = ChromeAndroidUserAgent
-	}
-
 	req, err := http.NewRequest(http.MethodGet, args.URL, nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("user-agent", args.UserAgent)
 
 	lastURL := req.URL
 	ctx = context.WithValue(ctx, lastURLKey, &req.URL)
-	req = req.WithContext(ctx)
+	req = setContextUserAgent(ctx, req, args.UserAgent)
 	resp, err := client.Do(req)
 	value := req.Context().Value(lastURLKey)
 	if ptr, _ := value.(**url.URL); ptr != nil {
@@ -96,4 +91,13 @@ func GetHTML(ctx context.Context, args GetArgs) (*Node, *url.URL, error) {
 func DrainAndClose(r io.ReadCloser) error {
 	io.Copy(ioutil.Discard, r)
 	return r.Close()
+}
+
+func setContextUserAgent(ctx context.Context, req *http.Request, ua string) *http.Request {
+	req = req.WithContext(ctx)
+	if ua == "" {
+		ua = ChromeAndroidUserAgent
+	}
+	req.Header.Set("user-agent", ua)
+	return req
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,13 +27,18 @@ var (
 		`https://www.theverge.com/22158504/best-games-2020-ps5-xbox-nintendo-tlou2-animal-crossing-miles-morales`,
 		"Destination URL for the HTTP GET request",
 	)
+	imagesDir = flag.String(
+		"images-dir",
+		`images`,
+		"Directory to download images",
+	)
 )
 
 func main() {
 	flag.Parse()
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
-	root, _, err := url2epub.GetHTML(ctx, url2epub.GetArgs{
+	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetArgs{
 		URL: *url,
 	})
 	if err != nil {
@@ -42,7 +49,7 @@ func main() {
 		if ampURL == "" {
 			log.Fatal("Unsupported URL")
 		}
-		root, _, err = url2epub.GetHTML(ctx, url2epub.GetArgs{
+		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetArgs{
 			URL: ampURL,
 		})
 		if err != nil {
@@ -52,13 +59,34 @@ func main() {
 			log.Fatal("Unsupported URL")
 		}
 	}
-	node := root.Readable()
+	node, images, err := root.Readable(ctx, baseURL, "", *imagesDir)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if node == nil {
 		// Should not happen
 		log.Fatal("Unsupported URL 2")
 	}
 	if err := html.Render(os.Stdout, node); err != nil {
 		log.Fatal("Failed to output readable HTML:", err)
+	}
+	for filename, reader := range images {
+		func(filename string, reader io.Reader) {
+			filename = filepath.Join(*imagesDir, filename)
+			f, err := os.Create(filename)
+			if err != nil {
+				log.Printf("Unable to write image %q: %v", filename, err)
+				return
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					log.Printf("Unable to close image file %q: %v", filename, err)
+				}
+			}()
+			if _, err := io.Copy(f, reader); err != nil {
+				log.Printf("Unable to write image %q: %v", filename, err)
+			}
+		}(filename, reader)
 	}
 }
 
