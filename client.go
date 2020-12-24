@@ -3,8 +3,13 @@ package url2epub
 import (
 	"context"
 	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 type lastURLKeyType struct{}
@@ -40,20 +45,24 @@ type GetArgs struct {
 	UserAgent string
 }
 
-// Get does HTTP get requests.
+// GetHTML does HTTP get requests on HTML content.
 //
 // It's different from standard http.Get in the following ways:
 //
-// 1. If there are redirects happening during the request, returned URL will be
+// - If there are redirects happening during the request, returned URL will be
 // the URL of the last (final) request.
 //
-// 2. By default it uses an User-Agent copied from Chrome Android version, to
+// - By default it uses an User-Agent copied from Chrome Android version, to
 // get the best chance of discovering the AMP version of the URL. This can be
 // overridden by the UserAgent arg.
 //
-// 3. The client used by Get does not have timeout set. It's expected that a
+// - Instead of returning *http.Response, it returns parsed *html.Node, with
+// Type being ElementNode and DataAtom being Html (instead of root node, which
+// is usually DoctypeNode).
+//
+// - The client used by Get does not have timeout set. It's expected that a
 // deadline is set in the ctx passed in.
-func Get(ctx context.Context, args GetArgs) (*http.Response, *url.URL, error) {
+func GetHTML(ctx context.Context, args GetArgs) (*Node, *url.URL, error) {
 	if args.UserAgent == "" {
 		args.UserAgent = ChromeAndroidUserAgent
 	}
@@ -72,5 +81,19 @@ func Get(ctx context.Context, args GetArgs) (*http.Response, *url.URL, error) {
 	if ptr, _ := value.(**url.URL); ptr != nil {
 		lastURL = *ptr
 	}
-	return resp, lastURL, err
+	if err != nil {
+		return nil, lastURL, err
+	}
+	defer DrainAndClose(resp.Body)
+	root, err := html.Parse(resp.Body)
+	if err != nil {
+		return nil, lastURL, err
+	}
+	return FromNode(root).FindFirstAtomNode(atom.Html), lastURL, err
+}
+
+// DrainAndClose drains and closes r.
+func DrainAndClose(r io.ReadCloser) error {
+	io.Copy(ioutil.Discard, r)
+	return r.Close()
 }
