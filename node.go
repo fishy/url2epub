@@ -1,6 +1,8 @@
 package url2epub
 
 import (
+	"strings"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -107,6 +109,56 @@ func (n *Node) GetAMPurl() string {
 		}
 		if rel == "amphtml" {
 			found = href
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+// GetTitle returns the title of the document, if any.
+//
+// Note that if og:title exists in the meta header, it's preferred over title.
+func (n *Node) GetTitle() string {
+	head := n.FindFirstAtomNode(atom.Head)
+	if head == nil {
+		return ""
+	}
+
+	var ogTitle string
+	head.ForEachChild(func(cc *Node) bool {
+		c := cc.AsNode()
+		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
+			return true
+		}
+		var property, content string
+		for _, attr := range c.Attr {
+			switch attr.Key {
+			case "property":
+				property = attr.Val
+			case "content":
+				content = attr.Val
+			}
+		}
+		if property == "og:title" {
+			ogTitle = content
+			return false
+		}
+		return true
+	})
+	if ogTitle != "" {
+		return ogTitle
+	}
+
+	title := head.FindFirstAtomNode(atom.Title)
+	if title == nil {
+		return ""
+	}
+	var found string
+	title.ForEachChild(func(cc *Node) bool {
+		c := cc.AsNode()
+		if c.Type == html.TextNode {
+			found = strings.TrimSpace(c.Data)
 			return false
 		}
 		return true
