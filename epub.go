@@ -67,8 +67,25 @@ type epubOpfData struct {
 	Images      map[string]string
 }
 
+// EpubArgs defines the args used by Epub function.
+type EpubArgs struct {
+	// The destination to write the epub content to.
+	Dest io.Writer
+
+	// The title of the epub.
+	Title string
+
+	// The node pointing to the html tag.
+	Node *html.Node
+
+	// Images map:
+	// key: image local filename
+	// value: image content
+	Images map[string]io.Reader
+}
+
 // Epub creates an Epub 3.0 file from given content.
-func Epub(dest io.Writer, title string, node *html.Node, images map[string]io.Reader) (id string, err error) {
+func Epub(args EpubArgs) (id string, err error) {
 	var randomID uuid.UUID
 	randomID, err = uuid.NewRandom()
 	if err != nil {
@@ -76,7 +93,7 @@ func Epub(dest io.Writer, title string, node *html.Node, images map[string]io.Re
 	}
 	id = randomID.String()
 
-	z := zip.NewWriter(dest)
+	z := zip.NewWriter(args.Dest)
 	defer func() {
 		closeErr := z.Close()
 		if err == nil {
@@ -109,13 +126,13 @@ func Epub(dest io.Writer, title string, node *html.Node, images map[string]io.Re
 	if err != nil {
 		return
 	}
-	err = html.Render(writer, node)
+	err = html.Render(writer, args.Node)
 	if err != nil {
 		return
 	}
 
-	imageContentTypes := make(map[string]string, len(images))
-	for filename, reader := range images {
+	imageContentTypes := make(map[string]string, len(args.Images))
+	for filename, reader := range args.Images {
 		writer, err = z.Create(path.Join(epubContentDir, filename))
 		if err != nil {
 			return
@@ -139,8 +156,8 @@ func Epub(dest io.Writer, title string, node *html.Node, images map[string]io.Re
 	}
 	err = epubOpfTmpl.Execute(writer, epubOpfData{
 		ID:          id,
-		Title:       title,
-		Lang:        FromNode(node).GetLang(),
+		Title:       args.Title,
+		Lang:        FromNode(args.Node).GetLang(),
 		Time:        time.Now().Format(time.RFC3339),
 		ArticlePath: epubArticleFilename,
 		Images:      imageContentTypes,

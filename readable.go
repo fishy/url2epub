@@ -62,18 +62,33 @@ var ampAtoms = map[string]atom.Atom{
 	"amp-img": atom.Img,
 }
 
+// ReadableArgs defines the args used by Readable function.
+type ReadableArgs struct {
+	// Base URL of the document, used in case the image URLs are relative.
+	BaseURL *url.URL
+
+	// User-Agent to be used to download images.
+	UserAgent string
+
+	// Directory prefix for downloaded images.
+	ImagesDir string
+}
+
 // Readable strips node n into a readable one, with all images downloaded and
 // replaced.
-func (n *Node) Readable(
-	ctx context.Context,
-	baseURL *url.URL,
-	userAgent string,
-	imagesDir string,
-) (*html.Node, map[string]io.Reader, error) {
+func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map[string]io.Reader, error) {
 	images := make(map[string]io.Reader)
 	var wg sync.WaitGroup
 	var counter int
-	node, err := n.readableRecursive(ctx, &wg, baseURL, userAgent, imagesDir, images, &counter)
+	node, err := n.readableRecursive(
+		ctx,
+		&wg,
+		args.BaseURL,
+		args.UserAgent,
+		args.ImagesDir,
+		images,
+		&counter,
+	)
 	wg.Wait()
 	return node, images, err
 }

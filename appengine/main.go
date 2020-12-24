@@ -52,7 +52,10 @@ func main() {
 			log.Fatal("Unsupported URL")
 		}
 	}
-	node, images, err := root.Readable(ctx, baseURL, "", "images")
+	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
+		BaseURL:   baseURL,
+		ImagesDir: "images",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +63,12 @@ func main() {
 		// Should not happen
 		log.Fatal("Unsupported URL 2")
 	}
-	log.Print(url2epub.Epub(os.Stdout, root.GetTitle(), node, images))
+	log.Print(url2epub.Epub(url2epub.EpubArgs{
+		Dest:   os.Stdout,
+		Title:  root.GetTitle(),
+		Node:   node,
+		Images: images,
+	}))
 }
 
 func recursivePrint(n *url2epub.Node, prefix string) {
