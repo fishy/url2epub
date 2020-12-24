@@ -3,6 +3,7 @@ package url2epub
 import (
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"io"
 	"net/http"
 	"path"
@@ -133,18 +134,34 @@ func Epub(args EpubArgs) (id string, err error) {
 
 	imageContentTypes := make(map[string]string, len(args.Images))
 	for filename, reader := range args.Images {
-		writer, err = z.Create(path.Join(epubContentDir, filename))
-		if err != nil {
-			return
-		}
-		r := bufio.NewReader(reader)
-		buf, peekErr := r.Peek(contentTypePeekSize)
-		if peekErr != nil && peekErr != bufio.ErrBufferFull {
-			err = peekErr
-			return
-		}
-		imageContentTypes[filename] = http.DetectContentType(buf)
-		_, err = io.Copy(writer, r)
+		err = func() (err error) {
+			if readCloser, ok := reader.(io.ReadCloser); ok {
+				defer DrainAndClose(readCloser)
+			}
+			writer, err = z.Create(path.Join(epubContentDir, filename))
+			if err != nil {
+				return
+			}
+			var buf []byte
+			if buffer, ok := reader.(*bytes.Buffer); ok {
+				buf = buffer.Bytes()
+			} else {
+				r := bufio.NewReader(reader)
+				var peekErr error
+				buf, peekErr = r.Peek(contentTypePeekSize)
+				if peekErr != nil && peekErr != bufio.ErrBufferFull {
+					err = peekErr
+					return
+				}
+				reader = r
+			}
+			imageContentTypes[filename] = http.DetectContentType(buf)
+			_, err = io.Copy(writer, reader)
+			if err != nil {
+				return
+			}
+			return nil
+		}()
 		if err != nil {
 			return
 		}
