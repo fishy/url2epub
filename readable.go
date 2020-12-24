@@ -151,7 +151,8 @@ func (n *Node) readableRecursive(
 			srcURL = baseURL.ResolveReference(srcURL)
 			*imgCounter++
 			filename := fmt.Sprintf("%03d", *imgCounter) + path.Ext(srcURL.Path)
-			newNode.Attr[srcIndex].Val = path.Join(imagesDir, filename)
+			filename = path.Join(imagesDir, filename)
+			newNode.Attr[srcIndex].Val = filename
 			buf := new(bytes.Buffer)
 			images[filename] = buf
 			wg.Add(1)

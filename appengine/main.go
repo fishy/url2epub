@@ -4,10 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,11 +24,6 @@ var (
 		"url",
 		`https://www.theverge.com/22158504/best-games-2020-ps5-xbox-nintendo-tlou2-animal-crossing-miles-morales`,
 		"Destination URL for the HTTP GET request",
-	)
-	imagesDir = flag.String(
-		"images-dir",
-		`images`,
-		"Directory to download images",
 	)
 )
 
@@ -59,7 +52,7 @@ func main() {
 			log.Fatal("Unsupported URL")
 		}
 	}
-	node, images, err := root.Readable(ctx, baseURL, "", *imagesDir)
+	node, images, err := root.Readable(ctx, baseURL, "", "images")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,27 +60,7 @@ func main() {
 		// Should not happen
 		log.Fatal("Unsupported URL 2")
 	}
-	if err := html.Render(os.Stdout, node); err != nil {
-		log.Fatal("Failed to output readable HTML:", err)
-	}
-	for filename, reader := range images {
-		func(filename string, reader io.Reader) {
-			filename = filepath.Join(*imagesDir, filename)
-			f, err := os.Create(filename)
-			if err != nil {
-				log.Printf("Unable to write image %q: %v", filename, err)
-				return
-			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					log.Printf("Unable to close image file %q: %v", filename, err)
-				}
-			}()
-			if _, err := io.Copy(f, reader); err != nil {
-				log.Printf("Unable to write image %q: %v", filename, err)
-			}
-		}(filename, reader)
-	}
+	log.Print(url2epub.Epub(os.Stdout, root.GetTitle(), node, images))
 }
 
 func recursivePrint(n *url2epub.Node, prefix string) {

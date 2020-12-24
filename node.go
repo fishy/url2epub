@@ -98,17 +98,9 @@ func (n *Node) GetAMPurl() string {
 		if c.Type != html.ElementNode || c.DataAtom != atom.Link {
 			return true
 		}
-		var rel, href string
-		for _, attr := range c.Attr {
-			switch attr.Key {
-			case "rel":
-				rel = attr.Val
-			case "href":
-				href = attr.Val
-			}
-		}
-		if rel == "amphtml" {
-			found = href
+		m := buildAttrMap(&c)
+		if m["rel"] == "amphtml" {
+			found = m["href"]
 			return false
 		}
 		return true
@@ -125,23 +117,16 @@ func (n *Node) GetTitle() string {
 		return ""
 	}
 
+	// Try to find og:title.
 	var ogTitle string
 	head.ForEachChild(func(cc *Node) bool {
 		c := cc.AsNode()
 		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
 			return true
 		}
-		var property, content string
-		for _, attr := range c.Attr {
-			switch attr.Key {
-			case "property":
-				property = attr.Val
-			case "content":
-				content = attr.Val
-			}
-		}
-		if property == "og:title" {
-			ogTitle = content
+		m := buildAttrMap(&c)
+		if m["property"] == "og:title" {
+			ogTitle = m["content"]
 			return false
 		}
 		return true
@@ -164,4 +149,12 @@ func (n *Node) GetTitle() string {
 		return true
 	})
 	return found
+}
+
+func buildAttrMap(node *html.Node) map[string]string {
+	m := make(map[string]string, len(node.Attr))
+	for _, attr := range node.Attr {
+		m[attr.Key] = attr.Val
+	}
+	return m
 }
