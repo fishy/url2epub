@@ -143,7 +143,7 @@ func Epub(args EpubArgs) (id string, err error) {
 				var peekErr error
 				buf, peekErr = r.Peek(contentTypePeekSize)
 				if peekErr != nil && peekErr != io.EOF {
-					err = fmt.Errorf("epub: unable to detect content type for %q: %v", filename, peekErr)
+					err = fmt.Errorf("epub: unable to detect content type for %q: %w", filename, peekErr)
 					return
 				}
 				reader = r
