@@ -3,6 +3,7 @@ package url2epub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -63,28 +64,21 @@ type GetArgs struct {
 // - The client used by Get does not have timeout set. It's expected that a
 // deadline is set in the ctx passed in.
 func GetHTML(ctx context.Context, args GetArgs) (*Node, *url.URL, error) {
-	req, err := http.NewRequest(http.MethodGet, args.URL, nil)
+	src, err := url.Parse(args.URL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("unable to parse url %q: %w", args.URL, err)
 	}
 
-	lastURL := req.URL
-	ctx = context.WithValue(ctx, lastURLKey, &req.URL)
-	req = setContextUserAgent(ctx, req, args.UserAgent)
-	resp, err := client.Do(req)
-	value := req.Context().Value(lastURLKey)
-	if ptr, _ := value.(**url.URL); ptr != nil {
-		lastURL = *ptr
-	}
+	body, lastURL, err := get(ctx, src, args.UserAgent)
 	if err != nil {
-		return nil, lastURL, err
+		return nil, nil, fmt.Errorf("unable to get %q: %w", args.URL, err)
 	}
-	defer DrainAndClose(resp.Body)
-	root, err := html.Parse(resp.Body)
+	defer DrainAndClose(body)
+	root, err := html.Parse(body)
 	if err != nil {
-		return nil, lastURL, err
+		return nil, nil, fmt.Errorf("unable to parse %q: %w", lastURL, err)
 	}
-	return FromNode(root).FindFirstAtomNode(atom.Html), lastURL, err
+	return FromNode(root).FindFirstAtomNode(atom.Html), lastURL, nil
 }
 
 // DrainAndClose drains and closes r.
@@ -93,11 +87,29 @@ func DrainAndClose(r io.ReadCloser) error {
 	return r.Close()
 }
 
-func setContextUserAgent(ctx context.Context, req *http.Request, ua string) *http.Request {
+func get(ctx context.Context, src *url.URL, ua string) (io.ReadCloser, *url.URL, error) {
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL:    src,
+		Header: make(http.Header),
+	}
+
+	lastURL := new(*url.URL)
+	*lastURL = src
+	ctx = context.WithValue(ctx, lastURLKey, lastURL)
 	req = req.WithContext(ctx)
 	if ua == "" {
 		ua = ChromeAndroidUserAgent
 	}
 	req.Header.Set("user-agent", ua)
-	return req
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		DrainAndClose(resp.Body)
+		return nil, nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return resp.Body, *lastURL, nil
 }

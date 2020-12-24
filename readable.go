@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -220,18 +219,9 @@ func (n *Node) readableRecursive(
 }
 
 func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader) {
-	req := setContextUserAgent(
-		ctx,
-		&http.Request{
-			Method: http.MethodGet,
-			URL:    src,
-			Header: make(http.Header),
-		},
-		userAgent,
-	)
-	resp, err := http.DefaultClient.Do(req)
+	body, _, err := get(ctx, src, userAgent)
 	if err != nil {
 		return
 	}
-	*dest = resp.Body
+	*dest = body
 }
