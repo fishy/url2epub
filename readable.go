@@ -25,9 +25,6 @@ var atoms = map[atom.Atom]set.String{
 		"width",
 		"height",
 	),
-	atom.Time: set.StringLiteral(
-		"datetime",
-	),
 	atom.Head:    nil,
 	atom.Title:   nil,
 	atom.Body:    nil,
@@ -43,6 +40,7 @@ var atoms = map[atom.Atom]set.String{
 	atom.Ul:      nil,
 	atom.Ol:      nil,
 	atom.Li:      nil,
+	atom.Time:    nil,
 	atom.Span:    nil,
 	atom.Em:      nil,
 	atom.Br:      nil,
@@ -89,7 +87,7 @@ func (n *Node) Readable() *html.Node {
 		}
 		attrs, ok := atoms[newNode.DataAtom]
 		if !ok {
-			// Not an atom we want to keep
+			// Not an atom we want to keep.
 			return nil
 		}
 		for _, attr := range node.Attr {
@@ -106,6 +104,10 @@ func (n *Node) Readable() *html.Node {
 			newNode.AppendChild(child)
 			return true
 		})
+		if len(newNode.Attr) == 0 && newNode.FirstChild == nil {
+			// This node has no children and no attributes, skipping
+			return nil
+		}
 		return newNode
 	}
 }
