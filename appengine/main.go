@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -36,9 +37,29 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("amp:", root.IsAMP())
-	fmt.Println("amp-url:", root.GetAMPurl())
-	recursivePrint(root, "")
+	if !root.IsAMP() {
+		ampURL := root.GetAMPurl()
+		if ampURL == "" {
+			log.Fatal("Unsupported URL")
+		}
+		root, _, err = url2epub.GetHTML(ctx, url2epub.GetArgs{
+			URL: ampURL,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		if !root.IsAMP() {
+			log.Fatal("Unsupported URL")
+		}
+	}
+	node := root.Readable()
+	if node == nil {
+		// Should not happen
+		log.Fatal("Unsupported URL 2")
+	}
+	if err := html.Render(os.Stdout, node); err != nil {
+		log.Fatal("Failed to output readable HTML:", err)
+	}
 }
 
 func recursivePrint(n *url2epub.Node, prefix string) {
