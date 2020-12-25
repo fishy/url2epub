@@ -41,26 +41,26 @@ const (
 	stopCommand  = `/stop`
 	dirCommand   = `/dir`
 
-	startErrMsg  = `Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/connect/desktop.`
-	startSaveErr = `Failed to save this registration. Please try again later.`
+	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/connect/desktop.`
+	startSaveErr = `🚫 Failed to save this registration. Please try again later.`
 	startExplain = `To link your reMarkable account, go to https://my.remarkable.com/connect/desktop, copy the 8-digit code, and come back to type "` + startCommand + ` <8-digit code>"`
 	startSuccess = `Successfully linked your reMarkable account! By default all epubs are sent to your root directory. To set a different one, use "` + dirCommand + `" command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success)`
 
-	notStartedMsg = `You did not run ` + startCommand + ` command yet.`
+	notStartedMsg = `🚫 You did not run ` + startCommand + ` command yet.`
 
 	stopMsg = `Successfully deleted your reMarkable token.`
 
-	dirErrMsg     = `Failed to list directories. Please try again later.`
+	dirErrMsg     = `🚫 Failed to list directories. Please try again later.`
 	dirMsg        = `You are currently saving to "%s", please choose a new directory to save to:`
-	dirSaveErr    = `Failed to save this directory. Please try again later.`
-	dirOldErr     = `Failed to save this directory. Please try ` + dirCommand + ` command again later.`
+	dirSaveErr    = `🚫 Failed to save this directory. Please try again later.`
+	dirOldErr     = `🚫 Failed to save this directory. Please try ` + dirCommand + ` command again later.`
 	dirSuccess    = `Saved!`
 	dirSuccessMsg = `Your new directory "%s" is saved.`
 
-	noURLmsg          = `No URL found in message.`
-	unsupportedURLmsg = `Unsupported URL: "%s"`
-	failedEpubMsg     = `Failed to generate epub from URL: "%s"`
-	failedUpload      = `Failed to upload epub to your reMarkable account for URL: "%s"`
+	noURLmsg          = `🚫 No URL found in message.`
+	unsupportedURLmsg = `⚠️ Unsupported URL: "%s"`
+	failedEpubMsg     = `🚫 Failed to generate epub from URL: "%s"`
+	failedUpload      = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
 	successUpload     = `Uploaded "%s.epub" to your reMarkable account from URL: "%s"`
 
 	dirIDPrefix = `dir:`
