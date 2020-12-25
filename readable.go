@@ -2,6 +2,7 @@ package url2epub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -109,20 +110,26 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		wg.Wait()
 		return nil, nil, err
 	}
+	if article == nil {
+		wg.Wait()
+		return nil, nil, errors.New("no article tag found")
+	}
 
-	node := &html.Node{
+	root := &html.Node{
 		Type:     html.ElementNode,
 		DataAtom: atom.Html,
 		Data:     atom.Html.String(),
 	}
-	node.AppendChild(head)
+	if head != nil {
+		root.AppendChild(head)
+	}
 	body := &html.Node{
 		Type:     html.ElementNode,
 		DataAtom: atom.Body,
 		Data:     atom.Body.String(),
 	}
 	body.AppendChild(article)
-	node.AppendChild(body)
+	root.AppendChild(body)
 
 	wg.Wait()
 	images := make(map[string]io.Reader, len(imgPointers))
@@ -135,7 +142,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		}
 		images[k] = reader
 	}
-	return node, images, err
+	return root, images, err
 }
 
 func (n *Node) readableRecursive(
