@@ -1,6 +1,6 @@
-// Package log provides a simple log interface that you can wrap whatever
+// Package logger provides a simple log interface that you can wrap whatever
 // logging library you use into.
-package log
+package logger
 
 import (
 	"log"

@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/fishy/url2epub"
-	"github.com/fishy/url2epub/log"
+	"github.com/fishy/url2epub/logger"
 )
 
 const (
@@ -26,7 +26,7 @@ var (
 	hostOnce sync.Once
 )
 
-func getHost(logger log.Logger) string {
+func getHost(logger logger.Logger) string {
 	hostOnce.Do(func() {
 		err := func() error {
 			req, err := http.NewRequest(http.MethodGet, discoveryURL, nil)

@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/fishy/url2epub"
-	"github.com/fishy/url2epub/log"
+	"github.com/fishy/url2epub/logger"
 )
 
 const (
@@ -74,7 +74,7 @@ func Register(ctx context.Context, args RegisterArgs) (*Client, error) {
 type Client struct {
 	RefreshToken string
 
-	Logger log.Logger
+	Logger logger.Logger
 
 	token string
 	host  string
