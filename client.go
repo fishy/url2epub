@@ -48,10 +48,6 @@ type GetHTMLArgs struct {
 // - If there are redirects happening during the request, returned URL will be
 // the URL of the last (final) request.
 //
-// - By default it uses an User-Agent copied from Chrome Android version, to
-// get the best chance of discovering the AMP version of the URL. This can be
-// overridden by the UserAgent arg.
-//
 // - Instead of returning *http.Response, it returns parsed *html.Node, with
 // Type being ElementNode and DataAtom being Html (instead of root node, which
 // is usually DoctypeNode).
