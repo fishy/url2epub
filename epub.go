@@ -105,8 +105,9 @@ func Epub(args EpubArgs) (id string, err error) {
 		}
 	}()
 
-	// mimetype must be the first file in the zip
-	err = ziputil.WriteFile(z, epubMimetypeFilename, ziputil.StringWriterTo(epubMimetypeContent))
+	// mimetype must be the first file in the zip,
+	// and must use Store instead of Deflate.
+	err = ziputil.StoreFile(z, epubMimetypeFilename, ziputil.StringWriterTo(epubMimetypeContent))
 	if err != nil {
 		return
 	}
