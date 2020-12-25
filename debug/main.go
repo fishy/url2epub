@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -24,6 +25,11 @@ var (
 		"",
 		"Destination URL for the HTTP GET request",
 	)
+	htmlOutput = flag.Bool(
+		"html",
+		false,
+		"Output stripped html instead",
+	)
 )
 
 func main() {
@@ -42,7 +48,31 @@ func main() {
 		root.IsAMP(),
 		root.GetAMPurl(),
 	)
-	recursivePrint(root, "")
+	if *htmlOutput {
+		if !root.IsAMP() {
+			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
+				URL: root.GetAMPurl(),
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		if !root.IsAMP() {
+			log.Fatal("Not AMP")
+		}
+		node, _, err := root.Readable(ctx, url2epub.ReadableArgs{
+			BaseURL: baseURL,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = html.Render(os.Stdout, node)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		recursivePrint(root, "")
+	}
 }
 
 func recursivePrint(n *url2epub.Node, prefix string) {
@@ -66,7 +96,7 @@ func recursivePrint(n *url2epub.Node, prefix string) {
 		fmt.Println(sb.String())
 	}
 	n.ForEachChild(func(c *url2epub.Node) bool {
-		recursivePrint(c, prefix+"  ")
+		recursivePrint(c, prefix+"| ")
 		return true
 	})
 }
