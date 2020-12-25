@@ -172,9 +172,9 @@ func Epub(args EpubArgs) (id string, err error) {
 			// NOTE: this does not return the correct n, but it's good enough for our
 			// use case.
 			return 0, epubOpfTmpl.Execute(w, epubOpfData{
-				ID:          id,
-				Title:       args.Title,
-				Lang:        FromNode(args.Node).GetLang(),
+				ID:          html.EscapeString(id),
+				Title:       html.EscapeString(args.Title),
+				Lang:        html.EscapeString(FromNode(args.Node).GetLang()),
 				Time:        time.Now().Format(time.RFC3339),
 				ArticlePath: epubArticleFilename,
 				Images:      imageContentTypes,
