@@ -18,6 +18,7 @@ type EntityChatToken struct {
 	Chat     int64  `datastore:"chat"`
 	Token    string `datastore:"token"`
 	ParentID string `datastore:"parent"`
+	Font     string `datastore:"font"`
 }
 
 func (e *EntityChatToken) getKey() string {
@@ -31,6 +32,11 @@ func (e *EntityChatToken) datastoreKey() *datastore.Key {
 // GetParentID returns the ParentID to use, after stripping prefix,
 func (e *EntityChatToken) GetParentID() string {
 	return strings.TrimPrefix(e.ParentID, dirIDPrefix)
+}
+
+// GetFont returns the Font to use, after stripping prefix,
+func (e *EntityChatToken) GetFont() string {
+	return strings.TrimPrefix(e.Font, fontPrefix)
 }
 
 // SaveDatastore saves this entity into datastore.
