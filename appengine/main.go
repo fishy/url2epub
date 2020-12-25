@@ -1,17 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"cloud.google.com/go/datastore"
 
+	"github.com/fishy/url2epub"
 	"github.com/fishy/url2epub/logger"
 	"github.com/fishy/url2epub/rmapi"
 	"github.com/fishy/url2epub/tgbot"
@@ -46,6 +51,12 @@ const (
 	dirOldErr     = `Failed to save this directory. Please try ` + dirCommand + ` command again later.`
 	dirSuccess    = `Saved!`
 	dirSuccessMsg = `Your new directory "%s" is saved.`
+
+	noURLmsg          = `No URL found in message.`
+	unsupportedURLmsg = `Unsupported URL: "%s"`
+	failedEpubMsg     = `Failed to generate epub from URL: "%s"`
+	failedUpload      = `Failed to upload epub to your reMarkable account for URL: "%s"`
+	successUpload     = `Uploaded "%s.epub" to your reMarkable account from URL: "%s"`
 
 	dirIDPrefix = `dir:`
 )
@@ -162,8 +173,62 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	switch {
 	default:
 		chat := GetChat(ctx, update.Message.Chat.ID)
-		// TODO
-		_ = chat
+		if chat == nil {
+			replyMessage(ctx, w, update.Message, notStartedMsg, true, nil)
+			return
+		}
+		var url string
+		for _, entity := range update.Message.Entities {
+			switch entity.Type {
+			case "url":
+				runes := []rune(text)
+				if int64(len(runes)) < entity.Offset+entity.Length {
+					errorLog.Printf("Unable to process url entity, entity = %v, msg = %q", entity, text)
+					continue
+				}
+				url = string(runes[entity.Offset : entity.Offset+entity.Length])
+				break
+			case "text_link":
+				url = entity.URL
+				break
+			}
+		}
+		if url == "" {
+			replyMessage(ctx, w, update.Message, noURLmsg, true, nil)
+			return
+		}
+		id, title, data, err := getEpub(ctx, url, r.Header.Get("user-agent"))
+		if err != nil {
+			errorLog.Printf("getEpub failed for %q: %v", url, err)
+			if errors.Is(err, errUnsupportedURL) {
+				replyMessage(ctx, w, update.Message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
+			} else {
+				replyMessage(ctx, w, update.Message, fmt.Sprintf(failedEpubMsg, url), true, nil)
+			}
+			return
+		}
+		client := &rmapi.Client{
+			RefreshToken: chat.Token,
+			Logger:       logger.StdLogger(infoLog),
+		}
+		start := time.Now()
+		defer func() {
+			infoLog.Printf("Upload took %v, err = %v", time.Since(start), err)
+		}()
+		err = client.Upload(ctx, rmapi.UploadArgs{
+			ID:       id,
+			Title:    title,
+			Data:     data,
+			Type:     rmapi.FileTypeEpub,
+			ParentID: chat.GetParentID(),
+		})
+		if err != nil {
+			errorLog.Printf("Upload failed for %q: %v", url, err)
+			replyMessage(ctx, w, update.Message, fmt.Sprintf(failedUpload, url), true, nil)
+			return
+		}
+		replyMessage(ctx, w, update.Message, fmt.Sprintf(successUpload, title, url), true, nil)
+		return
 
 	case strings.HasPrefix(text, startCommand):
 		token := strings.TrimPrefix(text, startCommand)
@@ -312,4 +377,54 @@ func getBot() *tgbot.Bot {
 
 func getProjectID() string {
 	return os.Getenv("GOOGLE_CLOUD_PROJECT")
+}
+
+var errUnsupportedURL = errors.New("unsupported URL")
+
+func getEpub(ctx context.Context, url string, ua string) (id, title string, data io.Reader, err error) {
+	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
+		URL:       url,
+		UserAgent: ua,
+	})
+	if err != nil {
+		return "", "", nil, err
+	}
+	if !root.IsAMP() {
+		ampURL := root.GetAMPurl()
+		if ampURL == "" {
+			return "", "", nil, errUnsupportedURL
+		}
+		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
+			URL:       ampURL,
+			UserAgent: ua,
+		})
+		if err != nil {
+			return "", "", nil, err
+		}
+		if !root.IsAMP() {
+			return "", "", nil, errUnsupportedURL
+		}
+	}
+	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
+		BaseURL:   baseURL,
+		ImagesDir: "images",
+	})
+	if err != nil {
+		return "", "", nil, err
+	}
+	if node == nil {
+		// Should not happen
+		return "", "", nil, errUnsupportedURL
+	}
+
+	buf := new(bytes.Buffer)
+	data = buf
+	title = root.GetTitle()
+	id, err = url2epub.Epub(url2epub.EpubArgs{
+		Dest:   buf,
+		Title:  title,
+		Node:   node,
+		Images: images,
+	})
+	return
 }

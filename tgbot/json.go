@@ -14,6 +14,8 @@ type Message struct {
 	Chat Chat   `json:"chat,omitempty"`
 	Date int64  `json:"date,omitempty"`
 	Text string `json:"text,omitempty"`
+
+	Entities []MessageEntity `json:"entities,omitempty"`
 }
 
 // User is a telegram user.
@@ -66,4 +68,12 @@ type CallbackQuery struct {
 type AnswerCallbackQuery struct {
 	ID   string `json:"callback_query_id,omitempty"`
 	Text string `json:"text,omitempty"`
+}
+
+// MessageEntity represents one special entity in a message (e.g. url)
+type MessageEntity struct {
+	Type   string `json:"type,omitempty"`
+	URL    string `json:"url,omitempty"`
+	Offset int64  `json:"offset,omitempty"`
+	Length int64  `json:"length,omitempty"`
 }
