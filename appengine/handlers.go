@@ -20,7 +20,9 @@ const (
 	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/connect/desktop.`
 	startSaveErr = `🚫 Failed to save this registration. Please try again later.`
 	startExplain = `ℹ️ To link your reMarkable account, go to https://my.remarkable.com/connect/desktop, copy the 8-digit code, and come back to type "` + startCommand + ` <8-digit code>"`
-	startSuccess = `✅ Successfully linked your reMarkable account! By default all epubs are sent to your root directory. To set a different one, use "` + dirCommand + `" command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success)`
+	startSuccess = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/list/desktop).
+By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
+You can also use ` + fontCommand + ` to set the default font on the created epub files.`
 
 	notStartedMsg = `🚫 You did not run ` + startCommand + ` command yet.`
 
@@ -134,7 +136,9 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		replyMessage(ctx, w, message, startSaveErr, true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, startSuccess, true, nil)
+	replyMessage(ctx, w, message, fmt.Sprintf(
+		startSuccess, rmDescription, time.Now().Format("2006-01-02"),
+	), true, nil)
 }
 
 func stopHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
