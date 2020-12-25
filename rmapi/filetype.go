@@ -29,26 +29,50 @@ func (ft FileType) Ext() string {
 	}
 }
 
-var contentTmpl = template.Must(template.New("content").Parse(`
-{
- "fileType": "{{.Type}}",
+var (
+	tmplEpub = template.Must(template.New("content").Parse(`{
+ "fileType": "epub",
+ "fontName": "{{.Font}}",
+ "lineHeight": 100,
+ "margins": 150,
+ "orientation": "portrait",
+ "textAlignment": "left",
+ "textScale": 1,
  "transform": {}
 }
 `))
 
+	tmplPdf = template.Must(template.New("content").Parse(`{
+ "fileType": "pdf",
+ "fontName": "{{.Font}}",
+ "margins": 100,
+ "orientation": "portrait",
+ "textAlignment": "left",
+ "textScale": 1,
+ "transform": {}
+}
+`))
+)
+
+// ContentArgs defines the args to population InitialContent.
+type ContentArgs struct {
+	Font string
+}
+
 // InitialContent returns the initial .content file for the given FileType.
-func (ft FileType) InitialContent() (string, error) {
-	var data struct {
-		Type string
-	}
+func (ft FileType) InitialContent(args ContentArgs) (string, error) {
+	var tmpl *template.Template
 	switch ft {
 	case FileTypeEpub:
-		data.Type = "epub"
+		tmpl = tmplEpub
 	case FileTypePdf:
-		data.Type = "pdf"
+		tmpl = tmplPdf
+	}
+	if tmpl == nil {
+		return "", nil
 	}
 	var buf bytes.Buffer
-	if err := contentTmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, args); err != nil {
 		return "", err
 	}
 	return buf.String(), nil

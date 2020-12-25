@@ -27,7 +27,8 @@ type UploadArgs struct {
 	Type FileType
 
 	// Optional
-	ParentID string
+	ParentID    string
+	ContentArgs ContentArgs
 }
 
 func (a UploadArgs) generateData(meta ItemMetadata) (_ io.Reader, err error) {
@@ -40,7 +41,7 @@ func (a UploadArgs) generateData(meta ItemMetadata) (_ io.Reader, err error) {
 		}
 	}()
 
-	content, err := a.Type.InitialContent()
+	content, err := a.Type.InitialContent(a.ContentArgs)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create .content file: %w", err)
 	}
