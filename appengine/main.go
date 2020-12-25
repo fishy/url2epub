@@ -31,7 +31,7 @@ func main() {
 	flag.Parse()
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
-	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetArgs{
+	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
 		URL: *url,
 	})
 	if err != nil {
@@ -42,14 +42,14 @@ func main() {
 		if ampURL == "" {
 			log.Fatalf("Unsupported URL: %q", baseURL)
 		}
-		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetArgs{
+		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
 			URL: ampURL,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 		if !root.IsAMP() {
-			log.Fatal("Unsupported URL: %q", baseURL)
+			log.Fatalf("Unsupported URL: %q", baseURL)
 		}
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{

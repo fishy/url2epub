@@ -32,8 +32,8 @@ var client = &http.Client{
 	},
 }
 
-// GetArgs define the arguments used by Get function.
-type GetArgs struct {
+// GetHTMLArgs define the arguments used by GetHTML function.
+type GetHTMLArgs struct {
 	// The HTTP GET URL, required.
 	URL string
 
@@ -58,7 +58,7 @@ type GetArgs struct {
 //
 // - The client used by Get does not have timeout set. It's expected that a
 // deadline is set in the ctx passed in.
-func GetHTML(ctx context.Context, args GetArgs) (*Node, *url.URL, error) {
+func GetHTML(ctx context.Context, args GetHTMLArgs) (*Node, *url.URL, error) {
 	src, err := url.Parse(args.URL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to parse url %q: %w", args.URL, err)
