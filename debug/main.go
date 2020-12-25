@@ -30,6 +30,11 @@ var (
 		false,
 		"Output stripped html instead",
 	)
+	epubOutput = flag.Bool(
+		"epub",
+		false,
+		"Output epub, disables -html",
+	)
 )
 
 func main() {
@@ -48,7 +53,7 @@ func main() {
 		root.IsAMP(),
 		root.GetAMPurl(),
 	)
-	if *htmlOutput {
+	if *htmlOutput || *epubOutput {
 		if !root.IsAMP() {
 			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
 				URL: root.GetAMPurl(),
@@ -60,15 +65,29 @@ func main() {
 		if !root.IsAMP() {
 			log.Fatal("Not AMP")
 		}
-		node, _, err := root.Readable(ctx, url2epub.ReadableArgs{
-			BaseURL: baseURL,
+		node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
+			BaseURL:   baseURL,
+			ImagesDir: "images",
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = html.Render(os.Stdout, node)
-		if err != nil {
-			log.Fatal(err)
+		if *epubOutput {
+			id, err := url2epub.Epub(url2epub.EpubArgs{
+				Dest:   os.Stdout,
+				Title:  root.GetTitle(),
+				Node:   node,
+				Images: images,
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("epub id: %v", id)
+		} else {
+			err = html.Render(os.Stdout, node)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else {
 		recursivePrint(root, "")
