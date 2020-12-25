@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -217,8 +216,9 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			Logger:       logger.StdLogger(infoLog),
 		}
 		start := time.Now()
+		size := data.Len()
 		defer func() {
-			infoLog.Printf("Upload took %v, err = %v", time.Since(start), err)
+			infoLog.Printf("Upload took %v, epub size = %d, err = %v", time.Since(start), size, err)
 		}()
 		ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
 		defer cancel()
@@ -235,6 +235,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		replyMessage(ctx, w, update.Message, fmt.Sprintf(successUpload, title, url), true, nil)
+		infoLog.Printf("Uploaded epub to reMarkable, epub file size = %d, id = %q, title = %q", size, id, title)
 		return
 
 	case strings.HasPrefix(text, startCommand):
@@ -388,7 +389,7 @@ func getProjectID() string {
 
 var errUnsupportedURL = errors.New("unsupported URL")
 
-func getEpub(ctx context.Context, url string, ua string) (id, title string, data io.Reader, err error) {
+func getEpub(ctx context.Context, url string, ua string) (id, title string, data *bytes.Buffer, err error) {
 	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
