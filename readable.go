@@ -79,7 +79,8 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 	imgMapping := make(map[string]string)
 	var wg sync.WaitGroup
 	var counter int
-	node, err := n.readableRecursive(
+
+	head, err := n.FindFirstAtomNode(atom.Head).readableRecursive(
 		ctx,
 		&wg,
 		args.BaseURL,
@@ -89,6 +90,40 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		imgMapping,
 		&counter,
 	)
+	if err != nil {
+		wg.Wait()
+		return nil, nil, err
+	}
+
+	article, err := n.FindFirstAtomNode(atom.Article).readableRecursive(
+		ctx,
+		&wg,
+		args.BaseURL,
+		args.UserAgent,
+		args.ImagesDir,
+		imgPointers,
+		imgMapping,
+		&counter,
+	)
+	if err != nil {
+		wg.Wait()
+		return nil, nil, err
+	}
+
+	node := &html.Node{
+		Type:     html.ElementNode,
+		DataAtom: atom.Html,
+		Data:     atom.Html.String(),
+	}
+	node.AppendChild(head)
+	body := &html.Node{
+		Type:     html.ElementNode,
+		DataAtom: atom.Body,
+		Data:     atom.Body.String(),
+	}
+	body.AppendChild(article)
+	node.AppendChild(body)
+
 	wg.Wait()
 	images := make(map[string]io.Reader, len(imgPointers))
 	for k, v := range imgPointers {
