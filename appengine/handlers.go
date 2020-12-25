@@ -26,8 +26,8 @@ const (
 
 	stopMsg = `✅ Successfully deleted your reMarkable token.`
 
+	dirMsg        = `You are currently saving to "%s", please choose a new directory to save to:`
 	dirErrMsg     = `🚫 Failed to list directories. Please try again later.`
-	dirMsg        = `✅ You are currently saving to "%s", please choose a new directory to save to:`
 	dirSaveErr    = `🚫 Failed to save this directory. Please try again later.`
 	dirOldErr     = `🚫 Failed to save this directory. Please try ` + dirCommand + ` command again later.`
 	dirSuccess    = `✅ Saved!`
@@ -93,6 +93,9 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		Data:     data,
 		Type:     rmapi.FileTypeEpub,
 		ParentID: chat.GetParentID(),
+		ContentArgs: rmapi.ContentArgs{
+			Font: chat.GetFont(),
+		},
 	})
 	if err != nil {
 		errorLog.Printf("Upload failed for %q: %v", url, err)
@@ -223,14 +226,6 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		&callback.Message.ID,
 		nil,
 	)
-}
-
-func fontHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
-	// TODO
-}
-
-func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
-	// TODO
 }
 
 func reply200(w http.ResponseWriter) {
