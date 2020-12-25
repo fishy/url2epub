@@ -8,12 +8,13 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"strings"
 	"text/template"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
+
+	"github.com/fishy/url2epub/ziputil"
 )
 
 const (
@@ -105,20 +106,20 @@ func Epub(args EpubArgs) (id string, err error) {
 	}()
 
 	// mimetype must be the first file in the zip
-	err = epubWriteFile(z, epubMimetypeFilename, stringWriterTo(epubMimetypeContent))
+	err = ziputil.WriteFile(z, epubMimetypeFilename, ziputil.StringWriterTo(epubMimetypeContent))
 	if err != nil {
 		return
 	}
 
-	err = epubWriteFile(z, epubContainerFilename, stringWriterTo(epubContainerContent))
+	err = ziputil.WriteFile(z, epubContainerFilename, ziputil.StringWriterTo(epubContainerContent))
 	if err != nil {
 		return
 	}
 
-	err = epubWriteFile(
+	err = ziputil.WriteFile(
 		z,
 		path.Join(epubContentDir, epubArticleFilename),
-		writerToWrapper(func(w io.Writer) (int64, error) {
+		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
 			// NOTE: this does not return the correct n, but it's good enough for our
 			// use case.
 			return 0, html.Render(w, args.Node)
@@ -150,10 +151,10 @@ func Epub(args EpubArgs) (id string, err error) {
 			}
 			imageContentTypes[f] = http.DetectContentType(buf)
 
-			return epubWriteFile(
+			return ziputil.WriteFile(
 				z,
 				filename,
-				writerToWrapper(func(w io.Writer) (int64, error) {
+				ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
 					return io.Copy(w, reader)
 				}),
 			)
@@ -163,10 +164,10 @@ func Epub(args EpubArgs) (id string, err error) {
 		}
 	}
 
-	err = epubWriteFile(
+	err = ziputil.WriteFile(
 		z,
 		epubOpfFullpath,
-		writerToWrapper(func(w io.Writer) (int64, error) {
+		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
 			// NOTE: this does not return the correct n, but it's good enough for our
 			// use case.
 			return 0, epubOpfTmpl.Execute(w, epubOpfData{
@@ -180,27 +181,4 @@ func Epub(args EpubArgs) (id string, err error) {
 		}),
 	)
 	return
-}
-
-func epubWriteFile(z *zip.Writer, filename string, src io.WriterTo) error {
-	writer, err := z.Create(filename)
-	if err != nil {
-		return fmt.Errorf("epubWriteFile: unable to create %q: %w", filename, err)
-	}
-	if _, err := src.WriteTo(writer); err != nil {
-		return fmt.Errorf("epubWriteFile: unable to write %q: %w", filename, err)
-	}
-	return nil
-}
-
-type stringWriterTo string
-
-func (s stringWriterTo) WriteTo(w io.Writer) (int64, error) {
-	return io.Copy(w, strings.NewReader(string(s)))
-}
-
-type writerToWrapper func(w io.Writer) (int64, error)
-
-func (w writerToWrapper) WriteTo(writer io.Writer) (int64, error) {
-	return w(writer)
 }
