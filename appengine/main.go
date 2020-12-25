@@ -23,6 +23,11 @@ import (
 )
 
 const (
+	epubTimeout   = time.Second * 5
+	uploadTimeout = time.Second * 5
+)
+
+const (
 	webhookMaxConn = 5
 
 	errNoToken = "no telebot token"
@@ -215,6 +220,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			infoLog.Printf("Upload took %v, err = %v", time.Since(start), err)
 		}()
+		ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
+		defer cancel()
 		err = client.Upload(ctx, rmapi.UploadArgs{
 			ID:       id,
 			Title:    title,
@@ -382,6 +389,8 @@ func getProjectID() string {
 var errUnsupportedURL = errors.New("unsupported URL")
 
 func getEpub(ctx context.Context, url string, ua string) (id, title string, data io.Reader, err error) {
+	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
+	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
 		URL:       url,
 		UserAgent: ua,
