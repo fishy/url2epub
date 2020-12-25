@@ -71,7 +71,7 @@ func resolveName(k string, items map[string]*ItemInfo, m map[string]string) stri
 	item := items[k]
 	if item == nil {
 		// Should not happen, but just in case
-		return "<UNKOWN-PARENT>"
+		return "<UNKNOWN-PARENT>"
 	}
 	if item.Parent == "" {
 		return item.Name
