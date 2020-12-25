@@ -123,10 +123,10 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		&counter,
 	)
 	if err != nil {
-		wg.Wait()
 		return nil, nil, err
 	}
 
+	var body *html.Node
 	article, err := n.FindFirstAtomNode(atom.Article).readableRecursive(
 		ctx,
 		&wg,
@@ -138,12 +138,32 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		&counter,
 	)
 	if err != nil {
-		wg.Wait()
 		return nil, nil, err
 	}
 	if article == nil {
-		wg.Wait()
-		return nil, nil, errors.New("no article tag found")
+		body, err = n.FindFirstAtomNode(atom.Body).readableRecursive(
+			ctx,
+			&wg,
+			args.BaseURL,
+			args.UserAgent,
+			args.ImagesDir,
+			imgPointers,
+			imgMapping,
+			&counter,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		if body == nil {
+			return nil, nil, errors.New("no body tag found")
+		}
+	} else {
+		body = &html.Node{
+			Type:     html.ElementNode,
+			DataAtom: atom.Body,
+			Data:     atom.Body.String(),
+		}
+		body.AppendChild(article)
 	}
 
 	root := &html.Node{
@@ -154,12 +174,6 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 	if head != nil {
 		root.AppendChild(head)
 	}
-	body := &html.Node{
-		Type:     html.ElementNode,
-		DataAtom: atom.Body,
-		Data:     atom.Body.String(),
-	}
-	body.AppendChild(article)
 	root.AppendChild(body)
 
 	wg.Wait()
