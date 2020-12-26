@@ -86,6 +86,12 @@ var atoms = map[atom.Atom]set.String{
 	atom.Ul:         nil,
 }
 
+// The atoms that we need to keep even if they have no attributes and no
+// children after stripping.
+var keepEmptyAtoms = set.Literal(
+	atom.Br,
+)
+
 // Replace some amp elements that's not defined in atoms with their
 // atom-equivalents.
 var ampAtoms = map[string]atom.Atom{
@@ -297,7 +303,7 @@ func (n *Node) readableRecursive(
 		if iterationErr != nil {
 			return nil, iterationErr
 		}
-		if len(newNode.Attr) == 0 && newNode.FirstChild == nil {
+		if len(newNode.Attr) == 0 && newNode.FirstChild == nil && !keepEmptyAtoms.Has(newNode.DataAtom) {
 			// This node has no children and no attributes, skipping
 			return nil, nil
 		}
