@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	flagutils "github.com/fishy/go-flagutils"
 	"golang.org/x/net/html"
 
 	"github.com/fishy/url2epub"
@@ -30,25 +31,33 @@ var (
 		"",
 		"User-Agent to use",
 	)
-	readableOutput = flag.Bool(
-		"readable",
-		false,
-		"Recursively print out the readable html tree instead of the original one.",
-	)
-	htmlOutput = flag.Bool(
-		"html",
-		false,
-		"Output stripped html instead, disables -readable.",
-	)
-	epubOutput = flag.Bool(
-		"epub",
-		false,
-		"Output epub, disables -readable, -html.",
-	)
 )
 
 func main() {
+	var (
+		readableOutput flagutils.OneOf
+		htmlOutput     flagutils.OneOf
+		epubOutput     flagutils.OneOf
+	)
+
+	flagutils.GroupOneOf(&readableOutput, &htmlOutput, &epubOutput)
+	flag.Var(
+		&readableOutput,
+		"readable",
+		"Recursively print out the readable html tree instead of the original one.",
+	)
+	flag.Var(
+		&htmlOutput,
+		"html",
+		"Output stripped html instead.",
+	)
+	flag.Var(
+		&epubOutput,
+		"epub",
+		"Output epub.",
+	)
 	flag.Parse()
+
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
@@ -64,7 +73,7 @@ func main() {
 		root.IsAMP(),
 		root.GetAMPurl(),
 	)
-	if *readableOutput || *htmlOutput || *epubOutput {
+	if readableOutput.Bool || htmlOutput.Bool || epubOutput.Bool {
 		if !root.IsAMP() {
 			ampURL := root.GetAMPurl()
 			if ampURL != "" {
@@ -91,7 +100,7 @@ func main() {
 		}
 
 		switch {
-		case *epubOutput:
+		case epubOutput.Bool:
 			id, err := url2epub.Epub(url2epub.EpubArgs{
 				Dest:   os.Stdout,
 				Title:  root.GetTitle(),
@@ -102,12 +111,14 @@ func main() {
 				log.Fatal(err)
 			}
 			log.Printf("epub id: %v", id)
-		case *htmlOutput:
+
+		case htmlOutput.Bool:
 			err = html.Render(os.Stdout, node)
 			if err != nil {
 				log.Fatal(err)
 			}
-		case *readableOutput:
+
+		case readableOutput.Bool:
 			recursivePrint(url2epub.FromNode(node), "")
 		}
 	} else {
