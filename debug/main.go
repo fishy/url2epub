@@ -13,6 +13,11 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/fishy/url2epub"
+	"github.com/fishy/url2epub/logger"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 )
 
 var (
@@ -30,6 +35,11 @@ var (
 		"ua",
 		"",
 		"User-Agent to use",
+	)
+	grayscale = flag.Bool(
+		"gray",
+		false,
+		"Grayscale images.",
 	)
 )
 
@@ -94,6 +104,8 @@ func main() {
 			BaseURL:   baseURL,
 			ImagesDir: "images",
 			UserAgent: *ua,
+			Grayscale: *grayscale,
+			Logger:    logger.StdLogger(nil),
 		})
 		if err != nil {
 			log.Fatal(err)
