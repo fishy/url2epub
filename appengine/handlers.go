@@ -303,6 +303,8 @@ func getEpub(ctx context.Context, url string, ua string) (id, title string, data
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
 		BaseURL:   baseURL,
 		ImagesDir: "images",
+		Grayscale: true,
+		Logger:    logger.StdLogger(errorLog),
 	})
 	if err != nil {
 		return "", "", nil, err
