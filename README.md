@@ -1,5 +1,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/fishy/url2epub.svg)](https://pkg.go.dev/github.com/fishy/url2epub)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fishy/url2epub)](https://goreportcard.com/report/github.com/fishy/url2epub)
+[![Gitter](https://badges.gitter.im/url2epub/community.svg)](https://gitter.im/url2epub/community)
 
 # url2epub
 Create ePub files from URLs
