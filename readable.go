@@ -13,10 +13,15 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
+	"github.com/fishy/url2epub/grayscale"
 	"github.com/fishy/url2epub/internal/set"
+	"github.com/fishy/url2epub/logger"
 )
 
-const imgSrc = "src"
+const (
+	imgSrc = "src"
+	jpgExt = ".jpg"
+)
 
 // A map of:
 // key: atoms we want to keep in the readable html.
@@ -108,6 +113,14 @@ type ReadableArgs struct {
 
 	// Directory prefix for downloaded images.
 	ImagesDir string
+
+	// If Grayscale is set to true,
+	// all images will be grayscaled and encoded as jpegs.
+	//
+	// If any error happened while trying to grayscale the image,
+	// it will be logged via Logger.
+	Grayscale bool
+	Logger    logger.Logger
 }
 
 // Readable strips node n into a readable one, with all images downloaded and
@@ -127,6 +140,8 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		imgPointers,
 		imgMapping,
 		&counter,
+		args.Grayscale,
+		args.Logger,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -142,6 +157,8 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		imgPointers,
 		imgMapping,
 		&counter,
+		args.Grayscale,
+		args.Logger,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -156,6 +173,8 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 			imgPointers,
 			imgMapping,
 			&counter,
+			args.Grayscale,
+			args.Logger,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -205,6 +224,8 @@ func (n *Node) readableRecursive(
 	images map[string]*io.Reader,
 	imgMapping map[string]string,
 	imgCounter *int,
+	gray bool,
+	logger logger.Logger,
 ) (*html.Node, error) {
 	if n == nil {
 		return nil, nil
@@ -274,7 +295,11 @@ func (n *Node) readableRecursive(
 				newNode.Attr[srcIndex].Val = filename
 			} else {
 				*imgCounter++
-				filename = fmt.Sprintf("%03d", *imgCounter) + path.Ext(srcURL.Path)
+				ext := path.Ext(srcURL.Path)
+				if gray {
+					ext = jpgExt
+				}
+				filename = fmt.Sprintf("%03d", *imgCounter) + ext
 				filename = path.Join(imagesDir, filename)
 				newNode.Attr[srcIndex].Val = filename
 				imgMapping[src] = filename
@@ -283,13 +308,13 @@ func (n *Node) readableRecursive(
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					downloadImage(ctx, srcURL, userAgent, reader)
+					downloadImage(ctx, srcURL, userAgent, reader, gray, logger)
 				}()
 			}
 		}
 		var iterationErr error
 		n.ForEachChild(func(c *Node) bool {
-			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter)
+			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter, gray, logger)
 			if err != nil {
 				iterationErr = err
 				return false
@@ -311,10 +336,25 @@ func (n *Node) readableRecursive(
 	}
 }
 
-func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader) {
+func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader, gray bool, logger logger.Logger) {
 	body, _, err := get(ctx, src, userAgent)
 	if err != nil {
 		return
 	}
-	*dest = body
+	if !gray {
+		*dest = body
+		return
+	}
+	defer DrainAndClose(body)
+	img, err := grayscale.FromReader(body)
+	if err != nil {
+		logger.Log(fmt.Sprintf("Error while trying to grayscale %q: %v", src.String(), err))
+		return
+	}
+	reader, err := img.ToJPEG()
+	if err != nil {
+		logger.Log(fmt.Sprintf("Error while trying to encode grayscaled %q: %v", src.String(), err))
+		return
+	}
+	*dest = reader
 }
