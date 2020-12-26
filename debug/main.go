@@ -18,22 +18,32 @@ var (
 	timeout = flag.Duration(
 		"timeout",
 		time.Second,
-		"Timeout for the HTTP GET request",
+		"Timeout for the HTTP GET request.",
 	)
 	url = flag.String(
 		"url",
 		"",
-		"Destination URL for the HTTP GET request",
+		"Destination URL for the HTTP GET request.",
+	)
+	ua = flag.String(
+		"ua",
+		"",
+		"User-Agent to use",
+	)
+	readableOutput = flag.Bool(
+		"readable",
+		false,
+		"Recursively print out the readable html tree instead of the original one.",
 	)
 	htmlOutput = flag.Bool(
 		"html",
 		false,
-		"Output stripped html instead",
+		"Output stripped html instead, disables -readable.",
 	)
 	epubOutput = flag.Bool(
 		"epub",
 		false,
-		"Output epub, disables -html",
+		"Output epub, disables -readable, -html.",
 	)
 )
 
@@ -42,7 +52,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-		URL: *url,
+		URL:       *url,
+		UserAgent: *ua,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -53,26 +64,34 @@ func main() {
 		root.IsAMP(),
 		root.GetAMPurl(),
 	)
-	if *htmlOutput || *epubOutput {
+	if *readableOutput || *htmlOutput || *epubOutput {
 		if !root.IsAMP() {
-			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-				URL: root.GetAMPurl(),
-			})
-			if err != nil {
-				log.Fatal(err)
+			ampURL := root.GetAMPurl()
+			if ampURL != "" {
+				root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
+					URL:       ampURL,
+					UserAgent: *ua,
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 		if !root.IsAMP() {
-			log.Fatal("Not AMP")
+			log.Print("Not AMP")
 		}
+
 		node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
 			BaseURL:   baseURL,
 			ImagesDir: "images",
+			UserAgent: *ua,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		if *epubOutput {
+
+		switch {
+		case *epubOutput:
 			id, err := url2epub.Epub(url2epub.EpubArgs{
 				Dest:   os.Stdout,
 				Title:  root.GetTitle(),
@@ -83,11 +102,13 @@ func main() {
 				log.Fatal(err)
 			}
 			log.Printf("epub id: %v", id)
-		} else {
+		case *htmlOutput:
 			err = html.Render(os.Stdout, node)
 			if err != nil {
 				log.Fatal(err)
 			}
+		case *readableOutput:
+			recursivePrint(url2epub.FromNode(node), "")
 		}
 	} else {
 		recursivePrint(root, "")
@@ -99,7 +120,14 @@ func recursivePrint(n *url2epub.Node, prefix string) {
 		return
 	}
 	node := n.AsNode()
-	if node.Type == html.ElementNode {
+	switch node.Type {
+	case html.TextNode:
+		text := []rune(node.Data)
+		if len(text) > 10 {
+			text = append(text[:10], []rune("...")...)
+		}
+		fmt.Printf("%s[text: %q]\n", prefix, string(text))
+	case html.ElementNode:
 		var sb strings.Builder
 		sb.WriteString(prefix)
 		sb.WriteString(node.Data)

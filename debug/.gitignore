@@ -1,1 +1,5 @@
 debug
+
+*.html
+*.epub
+*.output
