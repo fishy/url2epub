@@ -285,20 +285,18 @@ func getEpub(ctx context.Context, url string, ua string) (id, title string, data
 		return "", "", nil, err
 	}
 	if !root.IsAMP() {
-		ampURL := root.GetAMPurl()
-		if ampURL == "" {
-			return "", "", nil, errUnsupportedURL
+		if ampURL := root.GetAMPurl(); ampURL != "" {
+			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
+				URL:       ampURL,
+				UserAgent: ua,
+			})
+			if err != nil {
+				return "", "", nil, err
+			}
 		}
-		root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-			URL:       ampURL,
-			UserAgent: ua,
-		})
-		if err != nil {
-			return "", "", nil, err
-		}
-		if !root.IsAMP() {
-			return "", "", nil, errUnsupportedURL
-		}
+	}
+	if !root.IsAMP() {
+		infoLog.Printf("Generating epub from non-amp url: %q", baseURL.String())
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
 		BaseURL:   baseURL,
