@@ -1,5 +1,5 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/fishy/url2epub.svg)](https://pkg.go.dev/github.com/fishy/url2epub)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fishy/url2epub)](https://goreportcard.com/report/github.com/fishy/url2epub)
+[![Go Reference](https://pkg.go.dev/badge/go.yhsif.com/url2epub.svg)](https://pkg.go.dev/go.yhsif.com/url2epub)
+[![Go Report Card](https://goreportcard.com/badge/go.yhsif.com/url2epub)](https://goreportcard.com/report/go.yhsif.com/url2epub)
 [![Gitter](https://badges.gitter.im/url2epub/community.svg)](https://gitter.im/url2epub/community)
 
 # url2epub
@@ -25,9 +25,9 @@ the [Telegram Bot][bot] that does all this.
 
 [BSD 3-Clause](LICENSE).
 
-[root]: https://pkg.go.dev/github.com/fishy/url2epub
-[rmapi]: https://pkg.go.dev/github.com/fishy/url2epub/rmapi
-[tgbot]: https://pkg.go.dev/github.com/fishy/url2epub/tgbot
+[root]: https://pkg.go.dev/go.yhsif.com/url2epub
+[rmapi]: https://pkg.go.dev/go.yhsif.com/url2epub/rmapi
+[tgbot]: https://pkg.go.dev/go.yhsif.com/url2epub/tgbot
 [remarkable]: https://github.com/splitbrain/ReMarkableAPI/wiki
 [telegram]: https://core.telegram.org/bots/api
 [bot]: https://t.me/url2rM_bot?start=1

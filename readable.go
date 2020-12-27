@@ -13,9 +13,9 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/fishy/url2epub/grayscale"
-	"github.com/fishy/url2epub/internal/set"
-	"github.com/fishy/url2epub/logger"
+	"go.yhsif.com/url2epub/grayscale"
+	"go.yhsif.com/url2epub/internal/set"
+	"go.yhsif.com/url2epub/logger"
 )
 
 const (

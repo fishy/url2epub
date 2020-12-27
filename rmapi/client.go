@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/fishy/url2epub"
-	"github.com/fishy/url2epub/logger"
+	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/logger"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/fishy/url2epub"
+	"go.yhsif.com/url2epub"
 )
 
 // RootDisplayName is the display name to be used by the root directory.

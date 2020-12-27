@@ -1,6 +1,6 @@
 // Package logger provides a simple log interface that you can wrap whatever
 // logging library you use into.
-package logger
+package logger // import "go.yhsif.com/url2epub/logger"
 
 import (
 	"log"

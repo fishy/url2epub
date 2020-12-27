@@ -12,8 +12,8 @@ import (
 	flagutils "github.com/fishy/go-flagutils"
 	"golang.org/x/net/html"
 
-	"github.com/fishy/url2epub"
-	"github.com/fishy/url2epub/logger"
+	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/logger"
 
 	_ "image/gif"
 	_ "image/jpeg"

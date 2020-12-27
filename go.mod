@@ -1,4 +1,4 @@
-module github.com/fishy/url2epub
+module go.yhsif.com/url2epub
 
 go 1.15
 

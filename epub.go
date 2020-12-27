@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
 
-	"github.com/fishy/url2epub/ziputil"
+	"go.yhsif.com/url2epub/ziputil"
 )
 
 const (

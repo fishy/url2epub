@@ -1,4 +1,5 @@
-package ziputil
+// Package ziputil provides some utility functions for zip archive handling.
+package ziputil // import "go.yhsif.com/url2epub/ziputil"
 
 import (
 	"archive/zip"

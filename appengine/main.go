@@ -13,8 +13,8 @@ import (
 
 	"cloud.google.com/go/datastore"
 
-	"github.com/fishy/url2epub/logger"
-	"github.com/fishy/url2epub/tgbot"
+	"go.yhsif.com/url2epub/logger"
+	"go.yhsif.com/url2epub/tgbot"
 )
 
 const (

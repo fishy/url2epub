@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fishy/url2epub/tgbot"
+	"go.yhsif.com/url2epub/tgbot"
 )
 
 const (

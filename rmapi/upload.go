@@ -9,8 +9,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/fishy/url2epub"
-	"github.com/fishy/url2epub/ziputil"
+	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/ziputil"
 )
 
 const (
