@@ -14,6 +14,11 @@ import (
 	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
+
+	// For grayscale to work correctly
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 )
 
 const (
