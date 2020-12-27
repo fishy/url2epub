@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	flagutils "github.com/fishy/go-flagutils"
+	"go.yhsif.com/flagutils"
 	"golang.org/x/net/html"
 
 	"go.yhsif.com/url2epub"

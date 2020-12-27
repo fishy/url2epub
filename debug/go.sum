@@ -1,7 +1,7 @@
-github.com/fishy/go-flagutils v0.1.0 h1:X4r/xKpntHbNHcoX9pRzNCTOsQr9ZoVgN7nhN54k4aI=
-github.com/fishy/go-flagutils v0.1.0/go.mod h1:pWery4Vdv/YsnzrUJVIJNQ32nW1aV83VZBSmpNKkHcg=
 github.com/google/uuid v1.1.2 h1:EVhdT+1Kseyi1/pUmXKaFxYsDNy9RQYkMWRH68J/W7Y=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+go.yhsif.com/flagutils v0.2.0 h1:MVPdEZOTctSDd8fQ6CCeLlYTCneMY6pbGl1MWF9aJPc=
+go.yhsif.com/flagutils v0.2.0/go.mod h1:8ESSA1knO8Cqf5ugbFCZVFwg4qA6/rqwosc+M1aFWRk=
 golang.org/x/net v0.0.0-20201216054612-986b41b23924/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.0.0-20201224014010-6772e930b67b h1:iFwSg7t5GZmB/Q5TjiEAsdoLDrdJRC1RiF2WhuV29Qw=
 golang.org/x/net v0.0.0-20201224014010-6772e930b67b/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
