@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"go.yhsif.com/url2epub"
 	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
@@ -59,7 +57,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		case "url":
 			runes := []rune(text)
 			if int64(len(runes)) < entity.Offset+entity.Length {
-				errorLog.Printf("Unable to process url entity, entity = %v, msg = %q", entity, text)
+				errorLog.Printf("urlHandler: Unable to process url entity, entity = %v, msg = %q", entity, text)
 				continue
 			}
 			url = string(runes[entity.Offset : entity.Offset+entity.Length])
@@ -73,9 +71,9 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
-	id, title, data, err := getEpub(ctx, url, r.Header.Get("user-agent"))
+	id, title, data, err := getEpub(ctx, url, r.Header.Get("user-agent"), true)
 	if err != nil {
-		errorLog.Printf("getEpub failed for %q: %v", url, err)
+		errorLog.Printf("urlHandler: getEpub failed for %q: %v", url, err)
 		if errors.Is(err, errUnsupportedURL) {
 			replyMessage(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
 		} else {
@@ -90,7 +88,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 	start := time.Now()
 	size := data.Len()
 	defer func() {
-		infoLog.Printf("Upload took %v, epub size = %d, err = %v", time.Since(start), size, err)
+		infoLog.Printf("urlHandler: Upload took %v, epub size = %d, err = %v", time.Since(start), size, err)
 	}()
 	ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
 	defer cancel()
@@ -105,12 +103,12 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		},
 	})
 	if err != nil {
-		errorLog.Printf("Upload failed for %q: %v", url, err)
+		errorLog.Printf("urlHandler: Upload failed for %q: %v", url, err)
 		replyMessage(ctx, w, message, fmt.Sprintf(failedUpload, url), true, nil)
 		return
 	}
 	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, url), true, nil)
-	infoLog.Printf("Uploaded epub to reMarkable, epub file size = %d, id = %q, title = %q", size, id, title)
+	infoLog.Printf("urlHandler: Uploaded epub to reMarkable, epub file size = %d, id = %q, title = %q", size, id, title)
 }
 
 func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
@@ -125,7 +123,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Description: rmDescription,
 	})
 	if err != nil {
-		errorLog.Printf("Unable to register: %v", err)
+		errorLog.Printf("startHandler: Unable to register: %v", err)
 		replyMessage(ctx, w, message, fmt.Sprintf(
 			startErrMsg,
 			token,
@@ -137,7 +135,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Token: client.RefreshToken,
 	}
 	if err := chat.SaveDatastore(ctx); err != nil {
-		errorLog.Printf("Unable to save chat: %v", err)
+		errorLog.Printf("startHandler: Unable to save chat: %v", err)
 		replyMessage(ctx, w, message, startSaveErr, true, nil)
 		return
 	}
@@ -168,7 +166,7 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		errorLog.Printf("ListDirs failed: %v", err)
+		errorLog.Printf("dirHandler: ListDirs failed: %v", err)
 		replyMessage(ctx, w, message, dirErrMsg, true, nil)
 		return
 	}
@@ -195,27 +193,27 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 
 func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		errorLog.Printf("Bad callback, data = %q, callback = %#v", data, callback)
+		errorLog.Printf("dirCallbackHandler: Bad callback, data = %q, callback = %#v", data, callback)
 		getBot().ReplyCallback(ctx, callback.ID, dirOldErr)
 		reply200(w)
 		return
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		errorLog.Printf("Bad callback, data = %q, chat = %d", data, callback.Message.Chat.ID)
+		errorLog.Printf("dirCallbackHandler: Bad callback, data = %q, chat = %d", data, callback.Message.Chat.ID)
 		getBot().ReplyCallback(ctx, callback.ID, notStartedMsg)
 		reply200(w)
 		return
 	}
 	chat.ParentID = data
 	if err := chat.SaveDatastore(ctx); err != nil {
-		errorLog.Printf("Unable to save chat: %v", err)
+		errorLog.Printf("dirCallbackHandler: Unable to save chat: %v", err)
 		getBot().ReplyCallback(ctx, callback.ID, dirSaveErr)
 		reply200(w)
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		errorLog.Printf("Unable to reply callback: %v", err)
+		errorLog.Printf("dirCallbackHandler: Unable to reply callback: %v", err)
 	}
 	reply200(w)
 
@@ -225,7 +223,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		errorLog.Printf("Unable to list dir: %v", err)
+		errorLog.Printf("dirCallbackHandler: Unable to list dir: %v", err)
 		return
 	}
 	getBot().SendMessage(
@@ -275,56 +273,4 @@ func replyCallback(
 	}
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
-}
-
-var errUnsupportedURL = errors.New("unsupported URL")
-
-func getEpub(ctx context.Context, url string, ua string) (id, title string, data *bytes.Buffer, err error) {
-	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
-	defer cancel()
-	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-		URL:       url,
-		UserAgent: ua,
-	})
-	if err != nil {
-		return "", "", nil, err
-	}
-	if !root.IsAMP() {
-		if ampURL := root.GetAMPurl(); ampURL != "" {
-			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-				URL:       ampURL,
-				UserAgent: ua,
-			})
-			if err != nil {
-				return "", "", nil, err
-			}
-		}
-	}
-	if !root.IsAMP() {
-		infoLog.Printf("Generating epub from non-amp url: %q", baseURL.String())
-	}
-	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
-		BaseURL:   baseURL,
-		ImagesDir: "images",
-		Grayscale: true,
-		Logger:    logger.StdLogger(errorLog),
-	})
-	if err != nil {
-		return "", "", nil, err
-	}
-	if node == nil {
-		// Should not happen
-		return "", "", nil, errUnsupportedURL
-	}
-
-	buf := new(bytes.Buffer)
-	data = buf
-	title = root.GetTitle()
-	id, err = url2epub.Epub(url2epub.EpubArgs{
-		Dest:   buf,
-		Title:  title,
-		Node:   node,
-		Images: images,
-	})
-	return
 }

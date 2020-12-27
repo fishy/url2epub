@@ -63,6 +63,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
 	mux.HandleFunc(webhookPrefix, webhookHandler)
+	mux.HandleFunc("/epub", restEpubHandler)
 	mux.HandleFunc("/_ah/health", healthCheckHandler)
 
 	port := os.Getenv("PORT")

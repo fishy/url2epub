@@ -17,11 +17,13 @@ import (
 	"go.yhsif.com/url2epub/ziputil"
 )
 
+// EpubContentType is the mime type for epub
+const EpubMimeType = `application/epub+zip`
+
 const (
 	contentTypePeekSize = 512
 
 	epubMimetypeFilename = `mimetype`
-	epubMimetypeContent  = `application/epub+zip`
 
 	epubContainerFilename = `META-INF/container.xml`
 	epubContainerContent  = `<?xml version="1.0"?>
@@ -107,7 +109,7 @@ func Epub(args EpubArgs) (id string, err error) {
 
 	// mimetype must be the first file in the zip,
 	// and must use Store instead of Deflate.
-	err = ziputil.StoreFile(z, epubMimetypeFilename, ziputil.StringWriterTo(epubMimetypeContent))
+	err = ziputil.StoreFile(z, epubMimetypeFilename, ziputil.StringWriterTo(EpubMimeType))
 	if err != nil {
 		return
 	}

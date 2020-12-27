@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	chatKey = "chat-%d"
-	kind    = "rmapi-token"
+	chatKey  = "chat-%d"
+	chatKind = "rmapi-token"
 )
 
 // EntityChatToken is the entity rmapi token for a chat stored in datastore.
@@ -26,7 +26,7 @@ func (e *EntityChatToken) getKey() string {
 }
 
 func (e *EntityChatToken) datastoreKey() *datastore.Key {
-	return datastore.NameKey(kind, e.getKey(), nil)
+	return datastore.NameKey(chatKind, e.getKey(), nil)
 }
 
 // GetParentID returns the ParentID to use, after stripping prefix,
