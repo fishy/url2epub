@@ -8,7 +8,7 @@ work. For the [Telegram bot][bot], just talk to the bot from Telegram.
 Unless specified otherwise by the endpoint, all endpoints:
 
 1. Take both `GET` or `POST` requests
-  - For `POST` requests, you need to use [form][form] instead of JSON.
+   - For `POST` requests, you need to use [form][form] instead of JSON.
 1. If the API involves outbounding HTTP requests,
    those requests will carry the same `User-Agent` from the original request.
 1. Upon error, the response will be in plain text.
