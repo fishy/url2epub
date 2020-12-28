@@ -53,6 +53,8 @@ var atoms = map[atom.Atom]set.String{
 	atom.Details:    nil,
 	atom.Div:        nil,
 	atom.Em:         nil,
+	atom.Figure:     nil,
+	atom.Figcaption: nil,
 	atom.Footer:     nil,
 	atom.H1:         nil,
 	atom.H2:         nil,
