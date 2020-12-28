@@ -19,7 +19,7 @@ directly.
 [Telegram bot API][telegram], so all this can be done in a Telegram message.
 
 [`appengine/`](appengine/) directory provides the AppEngine implementation of
-the [Telegram Bot][bot] that does all this.
+the [Telegram Bot][bot] that does all this, and also serving [REST APIs][rest].
 
 ## License
 
@@ -31,3 +31,4 @@ the [Telegram Bot][bot] that does all this.
 [remarkable]: https://github.com/splitbrain/ReMarkableAPI/wiki
 [telegram]: https://core.telegram.org/bots/api
 [bot]: https://t.me/url2rM_bot?start=1
+[rest]: REST.md

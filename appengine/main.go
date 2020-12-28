@@ -41,6 +41,8 @@ const (
 
 	dirIDPrefix = `dir:`
 	fontPrefix  = `font:`
+
+	restDocURL = `https://github.com/fishy/url2epub/blob/main/REST.md`
 )
 
 var dsClient *datastore.Client
@@ -137,7 +139,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	http.NotFound(w, r)
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	http.Redirect(w, r, restDocURL, http.StatusTemporaryRedirect)
 }
 
 var tokenValue atomic.Value
