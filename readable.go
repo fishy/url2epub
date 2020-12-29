@@ -84,6 +84,7 @@ var atoms = map[atom.Atom]set.String{
 	atom.Table:      nil,
 	atom.Tbody:      nil,
 	atom.Tfoot:      nil,
+	atom.Td:         nil,
 	atom.Th:         nil,
 	atom.Thead:      nil,
 	atom.Tr:         nil,
@@ -97,6 +98,7 @@ var atoms = map[atom.Atom]set.String{
 // children after stripping.
 var keepEmptyAtoms = set.Literal(
 	atom.Br,
+	atom.Td,
 )
 
 // Replace some amp elements that's not defined in atoms with their
