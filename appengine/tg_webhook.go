@@ -42,7 +42,7 @@ You can also use ` + fontCommand + ` to set the default font on the created epub
 	unsupportedURLmsg = `⚠️ Unsupported URL: "%s"`
 	failedEpubMsg     = `🚫 Failed to generate epub from URL: "%s"`
 	failedUpload      = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
-	successUpload     = `✅ Uploaded "%s.epub" to your reMarkable account from URL: "%s"`
+	successUpload     = `✅ Uploaded "%s.epub" (%s) to your reMarkable account from URL: "%s"`
 )
 
 func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, message *tgbot.Message, text string) {
@@ -107,7 +107,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		replyMessage(ctx, w, message, fmt.Sprintf(failedUpload, url), true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, url), true, nil)
+	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
 	infoLog.Printf("urlHandler: Uploaded epub to reMarkable, epub file size = %d, id = %q, title = %q", size, id, title)
 }
 
@@ -273,4 +273,19 @@ func replyCallback(
 	}
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
+}
+
+var sizeUnits = []string{"KiB", "MiB"}
+
+func prettySize(size int) string {
+	s := fmt.Sprintf("%d B", size)
+	n := float64(size)
+	for _, unit := range sizeUnits {
+		n = n / 1024
+		if n < 0.95 {
+			return s
+		}
+		s = fmt.Sprintf("%.1f %s", n, unit)
+	}
+	return s
 }
