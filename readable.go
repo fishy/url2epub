@@ -320,6 +320,13 @@ func (n *Node) readableRecursive(
 					downloadImage(ctx, srcURL, userAgent, reader, gray, logger)
 				}()
 			}
+			// Skip adding childrens to img tags.
+			// When img tags have childrens, the render will fail with:
+			//     html: void element <img> has child nodes
+			// But amp-img tags are actually allowed to have children (fallbacks)
+			// For those cases, just drop them.
+			// See https://github.com/fishy/url2epub/issues/3.
+			return newNode, nil
 		}
 		var iterationErr error
 		n.ForEachChild(func(c *Node) bool {
