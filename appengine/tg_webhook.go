@@ -28,7 +28,8 @@ You can also use ` + fontCommand + ` to set the default font on the created epub
 
 	notStartedMsg = `🚫 You did not run ` + startCommand + ` command yet.`
 
-	stopMsg = `✅ Successfully deleted your reMarkable token.`
+	stopMsg = `✅ Successfully deleted your reMarkable token.
+You can now go to https://my.remarkable.com/list/desktop to revoke access.`
 
 	dirMsg        = `You are currently saving to "%s", please choose a new directory to save to:`
 	dirErrMsg     = `🚫 Failed to list directories. Please try again later.`
