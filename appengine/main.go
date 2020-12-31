@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,7 +12,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 
-	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/tgbot"
 )
 
@@ -47,18 +45,15 @@ const (
 
 var dsClient *datastore.Client
 
-// AppEngine log will auto add date and time, so there's no need to double log
-// them in our own logger.
-var (
-	infoLog  = log.New(os.Stdout, "I ", log.Lshortfile)
-	warnLog  = log.New(os.Stderr, "W ", log.Lshortfile)
-	errorLog = log.New(os.Stderr, "E ", log.Lshortfile)
-)
-
 func main() {
+	initLogger()
+
 	ctx := context.Background()
 	if err := initDatastoreClient(ctx); err != nil {
-		errorLog.Fatalf("Failed to get data store client: %v", err)
+		l(ctx).Fatalw(
+			"Failed to get data store client",
+			"err", err,
+		)
 	}
 	initBot(ctx)
 
@@ -71,10 +66,19 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-		infoLog.Printf("Defaulting to port %s", port)
+		l(ctx).Infow(
+			"Using default port",
+			"port", port,
+		)
 	}
-	infoLog.Printf("Listening on port %s", port)
-	infoLog.Print(http.ListenAndServe(fmt.Sprintf(":%s", port), mux))
+	l(ctx).Infow(
+		"Start listening",
+		"port", port,
+	)
+	l(ctx).Errorw(
+		"HTTP listener returned",
+		"err", http.ListenAndServe(fmt.Sprintf(":%s", port), mux),
+	)
 }
 
 func initDatastoreClient(ctx context.Context) error {
@@ -88,7 +92,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := logContext(r)
 
 	if !getBot().ValidateWebhookURL(r) {
 		http.NotFound(w, r)
@@ -96,14 +100,17 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Body == nil {
-		errorLog.Print("Empty webhook request body")
+		l(ctx).Error("Empty webhook request body")
 		http.NotFound(w, r)
 		return
 	}
 
 	var update tgbot.Update
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		errorLog.Printf("Unable to decode json: %v", err)
+		l(ctx).Errorw(
+			"Unable to decode json",
+			"err", err,
+		)
 		http.NotFound(w, r)
 		return
 	}
@@ -112,7 +119,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		data := callback.Data
 		switch {
 		default:
-			errorLog.Printf("Bad callback, data = %q, callback = %#v", data, callback)
+			l(ctx).Errorw(
+				"Bad callback",
+				"data", data,
+				"callback", callback,
+			)
 			getBot().ReplyCallback(ctx, callback.ID, unknownCallback)
 			reply200(w)
 		case strings.HasPrefix(data, dirIDPrefix):
@@ -152,17 +163,25 @@ var tokenValue atomic.Value
 func initBot(ctx context.Context) {
 	secret, err := getSecret(ctx, tokenID)
 	if err != nil {
-		errorLog.Printf("Failed to get token secret: %v", err)
+		l(ctx).Errorw(
+			"Failed to get token secret",
+			"err", err,
+		)
 	}
 	tokenValue.Store(&tgbot.Bot{
 		Token:           secret,
 		GlobalURLPrefix: globalURLPrefix,
 		WebhookPrefix:   webhookPrefix,
-		Logger:          logger.StdLogger(infoLog),
+		Logger: func(msg string) {
+			l(ctx).Info(msg)
+		},
 	})
 	_, err = getBot().SetWebhook(ctx, webhookMaxConn)
 	if err != nil {
-		errorLog.Fatalf("Failed to set webhook: %v", err)
+		l(ctx).Fatalw(
+			"Failed to set webhook",
+			"err", err,
+		)
 	}
 }
 

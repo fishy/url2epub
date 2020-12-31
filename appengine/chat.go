@@ -50,7 +50,11 @@ func (e *EntityChatToken) SaveDatastore(ctx context.Context) error {
 func (e *EntityChatToken) Delete(ctx context.Context) {
 	key := e.datastoreKey()
 	if err := dsClient.Delete(ctx, key); err != nil {
-		errorLog.Printf("Failed to delete datastore key %v: %v", key, err)
+		l(ctx).Errorw(
+			"Failed to delete datastore key",
+			"key", key,
+			"err", err,
+		)
 	}
 }
 
@@ -61,7 +65,11 @@ func GetChat(ctx context.Context, id int64) *EntityChatToken {
 	}
 	key := e.datastoreKey()
 	if err := dsClient.Get(ctx, key, e); err != nil {
-		errorLog.Printf("Failed to get datastore key %v: %v", key, err)
+		l(ctx).Errorw(
+			"Failed to get datastore key",
+			"key", key,
+			"err", err,
+		)
 		return nil
 	}
 	return e

@@ -9,15 +9,19 @@ import (
 	"strconv"
 
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 )
 
 func restEpubHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := logContext(r)
+
 	url := r.FormValue("url")
 	gray, _ := strconv.ParseBool(r.FormValue("gray"))
 	_, title, data, err := getEpub(r.Context(), url, r.Header.Get("user-agent"), gray)
 	if err != nil {
-		errorLog.Printf("restEpubHandler: getEpub failed: %v", err)
+		l(ctx).Errorw(
+			"getEpub failed",
+			"err", err,
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -54,13 +58,18 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		}
 	}
 	if !root.IsAMP() {
-		infoLog.Printf("getEpub: Generating epub from non-amp url: %q", baseURL.String())
+		l(ctx).Infow(
+			"Generating epub from non-amp url",
+			"url", baseURL.String(),
+		)
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
 		BaseURL:   baseURL,
 		ImagesDir: "images",
 		Grayscale: gray,
-		Logger:    logger.StdLogger(errorLog),
+		Logger: func(msg string) {
+			l(ctx).Error(msg)
+		},
 	})
 	if err != nil {
 		return "", "", nil, err

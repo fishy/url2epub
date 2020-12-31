@@ -100,27 +100,41 @@ func fontHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 
 func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		errorLog.Printf("Bad callback, data = %q, callback = %#v", data, callback)
+		l(ctx).Errorw(
+			"Bad callback",
+			"data", data,
+			"callback", callback,
+		)
 		getBot().ReplyCallback(ctx, callback.ID, fontOldErr)
 		reply200(w)
 		return
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		errorLog.Printf("Bad callback, data = %q, chat = %d", data, callback.Message.Chat.ID)
+		l(ctx).Errorw(
+			"Bad callback",
+			"data", data,
+			"chat", callback.Message.Chat.ID,
+		)
 		getBot().ReplyCallback(ctx, callback.ID, notStartedMsg)
 		reply200(w)
 		return
 	}
 	chat.Font = data
 	if err := chat.SaveDatastore(ctx); err != nil {
-		errorLog.Printf("Unable to save chat: %v", err)
+		l(ctx).Errorw(
+			"Unable to save chat",
+			"err", err,
+		)
 		getBot().ReplyCallback(ctx, callback.ID, fontSaveErr)
 		reply200(w)
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		errorLog.Printf("Unable to reply callback: %v", err)
+		l(ctx).Errorw(
+			"Unable to reply to callback",
+			"err", err,
+		)
 	}
 	getBot().SendMessage(
 		ctx,
