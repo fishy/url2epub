@@ -30,6 +30,12 @@ var atoms = map[atom.Atom]set.String{
 	atom.A: set.StringLiteral(
 		"href",
 	),
+	atom.Abbr: set.StringLiteral(
+		"title",
+	),
+	atom.Acronym: set.StringLiteral(
+		"title",
+	),
 	atom.Html: set.StringLiteral(
 		"lang",
 	),
@@ -40,7 +46,6 @@ var atoms = map[atom.Atom]set.String{
 		"height",
 	),
 
-	atom.Acronym:    nil,
 	atom.Article:    nil,
 	atom.B:          nil,
 	atom.Big:        nil,
