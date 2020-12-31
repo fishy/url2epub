@@ -6,10 +6,13 @@ import (
 
 	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func initLogger() {
-	logger, err := zapdriver.NewProduction()
+	cfg := zapdriver.NewProductionConfig()
+	cfg.EncoderConfig.EncodeDuration = zapcore.StringDurationEncoder
+	logger, err := cfg.Build(zapdriver.WrapCore())
 	if err != nil {
 		panic(err)
 	}
