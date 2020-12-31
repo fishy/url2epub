@@ -36,7 +36,13 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 
 var errUnsupportedURL = errors.New("unsupported URL")
 
+const defaultUserAgent = "url2epub (https://github.com/fishy/url2epub)"
+
 func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title string, data *bytes.Buffer, err error) {
+	if ua == "" {
+		ua = defaultUserAgent
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
