@@ -10,11 +10,11 @@ import (
 	"strings"
 	"sync"
 
+	"go.yhsif.com/immutable"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
 	"go.yhsif.com/url2epub/grayscale"
-	"go.yhsif.com/url2epub/internal/set"
 	"go.yhsif.com/url2epub/logger"
 )
 
@@ -26,82 +26,82 @@ const (
 // A map of:
 // key: atoms we want to keep in the readable html.
 // value: the attributes we want to keep inside this atom.
-var atoms = map[atom.Atom]set.String{
-	atom.A: set.StringLiteral(
+var atoms = map[atom.Atom]immutable.Set{
+	atom.A: immutable.SetLiteral(
 		"href",
 	),
-	atom.Abbr: set.StringLiteral(
+	atom.Abbr: immutable.SetLiteral(
 		"title",
 	),
-	atom.Acronym: set.StringLiteral(
+	atom.Acronym: immutable.SetLiteral(
 		"title",
 	),
-	atom.Html: set.StringLiteral(
+	atom.Html: immutable.SetLiteral(
 		"lang",
 	),
-	atom.Img: set.StringLiteral(
+	atom.Img: immutable.SetLiteral(
 		imgSrc,
 		"alt",
 		"width",
 		"height",
 	),
 
-	atom.Article:    nil,
-	atom.B:          nil,
-	atom.Big:        nil,
-	atom.Blockquote: nil,
-	atom.Body:       nil,
-	atom.Br:         nil,
-	atom.Center:     nil,
-	atom.Code:       nil,
-	atom.Del:        nil,
-	atom.Details:    nil,
-	atom.Div:        nil,
-	atom.Em:         nil,
-	atom.Figure:     nil,
-	atom.Figcaption: nil,
-	atom.Footer:     nil,
-	atom.H1:         nil,
-	atom.H2:         nil,
-	atom.H3:         nil,
-	atom.H4:         nil,
-	atom.H5:         nil,
-	atom.H6:         nil,
-	atom.Head:       nil,
-	atom.Header:     nil,
-	atom.I:          nil,
-	atom.Li:         nil,
-	atom.Main:       nil,
-	atom.Mark:       nil,
-	atom.Ol:         nil,
-	atom.P:          nil,
-	atom.Pre:        nil,
-	atom.Q:          nil,
-	atom.S:          nil,
-	atom.Section:    nil,
-	atom.Small:      nil,
-	atom.Span:       nil,
-	atom.Strike:     nil,
-	atom.Strong:     nil,
-	atom.Sub:        nil,
-	atom.Summary:    nil,
-	atom.Sup:        nil,
-	atom.Table:      nil,
-	atom.Tbody:      nil,
-	atom.Tfoot:      nil,
-	atom.Td:         nil,
-	atom.Th:         nil,
-	atom.Thead:      nil,
-	atom.Tr:         nil,
-	atom.Time:       nil,
-	atom.Title:      nil,
-	atom.U:          nil,
-	atom.Ul:         nil,
+	atom.Article:    immutable.EmptySet,
+	atom.B:          immutable.EmptySet,
+	atom.Big:        immutable.EmptySet,
+	atom.Blockquote: immutable.EmptySet,
+	atom.Body:       immutable.EmptySet,
+	atom.Br:         immutable.EmptySet,
+	atom.Center:     immutable.EmptySet,
+	atom.Code:       immutable.EmptySet,
+	atom.Del:        immutable.EmptySet,
+	atom.Details:    immutable.EmptySet,
+	atom.Div:        immutable.EmptySet,
+	atom.Em:         immutable.EmptySet,
+	atom.Figure:     immutable.EmptySet,
+	atom.Figcaption: immutable.EmptySet,
+	atom.Footer:     immutable.EmptySet,
+	atom.H1:         immutable.EmptySet,
+	atom.H2:         immutable.EmptySet,
+	atom.H3:         immutable.EmptySet,
+	atom.H4:         immutable.EmptySet,
+	atom.H5:         immutable.EmptySet,
+	atom.H6:         immutable.EmptySet,
+	atom.Head:       immutable.EmptySet,
+	atom.Header:     immutable.EmptySet,
+	atom.I:          immutable.EmptySet,
+	atom.Li:         immutable.EmptySet,
+	atom.Main:       immutable.EmptySet,
+	atom.Mark:       immutable.EmptySet,
+	atom.Ol:         immutable.EmptySet,
+	atom.P:          immutable.EmptySet,
+	atom.Pre:        immutable.EmptySet,
+	atom.Q:          immutable.EmptySet,
+	atom.S:          immutable.EmptySet,
+	atom.Section:    immutable.EmptySet,
+	atom.Small:      immutable.EmptySet,
+	atom.Span:       immutable.EmptySet,
+	atom.Strike:     immutable.EmptySet,
+	atom.Strong:     immutable.EmptySet,
+	atom.Sub:        immutable.EmptySet,
+	atom.Summary:    immutable.EmptySet,
+	atom.Sup:        immutable.EmptySet,
+	atom.Table:      immutable.EmptySet,
+	atom.Tbody:      immutable.EmptySet,
+	atom.Tfoot:      immutable.EmptySet,
+	atom.Td:         immutable.EmptySet,
+	atom.Th:         immutable.EmptySet,
+	atom.Thead:      immutable.EmptySet,
+	atom.Tr:         immutable.EmptySet,
+	atom.Time:       immutable.EmptySet,
+	atom.Title:      immutable.EmptySet,
+	atom.U:          immutable.EmptySet,
+	atom.Ul:         immutable.EmptySet,
 }
 
 // The atoms that we need to keep even if they have no attributes and no
 // children after stripping.
-var keepEmptyAtoms = set.Literal(
+var keepEmptyAtoms = immutable.SetLiteral(
 	atom.Br,
 	atom.Td,
 )
@@ -277,7 +277,7 @@ func (n *Node) readableRecursive(
 		}
 		srcIndex := -1
 		for _, attr := range node.Attr {
-			if !attrs.Has(attr.Key) {
+			if !attrs.Contains(attr.Key) {
 				continue
 			}
 			i := len(newNode.Attr)
@@ -344,7 +344,7 @@ func (n *Node) readableRecursive(
 		if iterationErr != nil {
 			return nil, iterationErr
 		}
-		if len(newNode.Attr) == 0 && newNode.FirstChild == nil && !keepEmptyAtoms.Has(newNode.DataAtom) {
+		if len(newNode.Attr) == 0 && newNode.FirstChild == nil && !keepEmptyAtoms.Contains(newNode.DataAtom) {
 			// This node has no children and no attributes, skipping
 			return nil, nil
 		}
