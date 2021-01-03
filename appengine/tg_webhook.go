@@ -129,7 +129,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
 	l(ctx).Infow(
 		"urlHandler: Uploaded epub to reMarkable",
-		"epub file size", size,
+		"epub size", size,
 		"id", id,
 		"title", title,
 	)
