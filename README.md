@@ -8,7 +8,7 @@ Create ePub files from URLs
 ## Overview
 
 The [root][root] directory provides a Go library that creates ePub files out of
-URLs, with limitations (currently only support articles with an AMP version).
+URLs, with limitations.
 
 [`rmapi/`][rmapi] directory provides a Go library that implements
 [reMarkable API][remarkable],
