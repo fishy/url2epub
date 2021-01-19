@@ -10,5 +10,6 @@ require (
 	github.com/blendle/zapdriver v1.3.1
 	go.uber.org/zap v1.16.0
 	go.yhsif.com/url2epub v0.0.0-00010101000000-000000000000
+	golang.org/x/image v0.0.0-20201208152932-35266b937fa6
 	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d
 )

@@ -13,6 +13,7 @@ import (
 	"go.yhsif.com/url2epub/tgbot"
 
 	// For grayscale to work correctly
+	_ "golang.org/x/image/webp"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
