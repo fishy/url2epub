@@ -10,12 +10,13 @@ import (
 // used in responses, as a result it's important for all of them to have
 // omitempty json tag.
 type ItemInfo struct {
-	ID        string `json:"ID,omitempty"`
-	Type      string `json:"Type,omitempty"`
-	Name      string `json:"VissibleName,omitempty"`
-	Parent    string `json:"Parent,omitempty"`
-	Version   int    `json:"Version,omitempty"`
-	UploadURL string `json:"BlobURLPut,omitempty"`
+	ID           string `json:"ID,omitempty"`
+	Type         string `json:"Type,omitempty"`
+	Name         string `json:"VisibleName,omitempty"`
+	LastModified string `json:"lastModified,omitempty"`
+	Parent       string `json:"Parent,omitempty"`
+	Version      int    `json:"Version,omitempty"`
+	UploadURL    string `json:"BlobURLPut,omitempty"`
 
 	// responses only
 	Message string `json:"Message,omitempty"`

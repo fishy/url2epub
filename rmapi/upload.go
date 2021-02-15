@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	"go.yhsif.com/url2epub"
 	"go.yhsif.com/url2epub/ziputil"
@@ -96,11 +98,12 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 	}
 
 	payload := ItemInfo{
-		ID:      args.ID,
-		Name:    args.Title,
-		Type:    "DocumentType",
-		Version: 1,
-		Parent:  args.ParentID,
+		ID:           args.ID,
+		Name:         args.Title,
+		Type:         "DocumentType",
+		Version:      1,
+		LastModified: strconv.FormatInt(time.Now().UnixNano()/1e6, 10),
+		Parent:       args.ParentID,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode([]ItemInfo{payload}); err != nil {
