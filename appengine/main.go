@@ -134,6 +134,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if update.Message == nil {
+		l(ctx).Warnw("Not a message nor callback, ignoring...", "update", update)
+		reply200(w)
+		return
+	}
 	text := update.Message.Text
 	switch {
 	default:

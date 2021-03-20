@@ -5,6 +5,19 @@ type Update struct {
 	ID       int64          `json:"update_id,omitempty"`
 	Message  *Message       `json:"message,omitempty"`
 	Callback *CallbackQuery `json:"callback_query,omitempty"`
+
+	// Other not yet supported sub-message types.
+	EditedMessage      *Message          `json:"edited_message,omitempty"`
+	ChannelPost        *Message          `json:"channel_post,omitempty"`
+	EditedChannelPost  *Message          `json:"edited_channel_post,omitempty"`
+	Inline             *NotSupportedType `json:"inline,omitempty"`
+	ChooseInlineResult *NotSupportedType `json:"choose_inline_result,omitempty"`
+	Shipping           *NotSupportedType `json:"shipping_query,omitempty"`
+	PreCheckout        *NotSupportedType `json:"pre_checkout_query,omitempty"`
+	Poll               *NotSupportedType `json:"poll,omitempty"`
+	PollAnswer         *NotSupportedType `json:"poll_answer,omitempty"`
+	MyChatMemeber      *NotSupportedType `json:"my_chat_member,omitempty"`
+	ChatMemeber        *NotSupportedType `json:"chat_member,omitempty"`
 }
 
 // Message is a telegram message.
@@ -76,4 +89,19 @@ type MessageEntity struct {
 	URL    string `json:"url,omitempty"`
 	Offset int64  `json:"offset,omitempty"`
 	Length int64  `json:"length,omitempty"`
+}
+
+// NotSupportedType defines some of the sub-message types that could happe in
+// Update that we do not support yet. It helps us to log to know which
+// sub-message type is in the Update message.
+//
+// These types include: InlineQuery, ChooseInlineResult, ShippingQuery,
+// PreCheckoutQuery, Poll, PollAnswer, ChatMemberUpdated.
+type NotSupportedType struct {
+	ID   string `json:"id,omitempty"`
+	Date int64  `json:"date,omitempty"`
+
+	Chat Chat  `json:"chat,omitempty"`
+	From *User `json:"from,omitempty"`
+	User *User `json:"user,omitempty"`
 }

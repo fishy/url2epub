@@ -1,6 +1,6 @@
 module go.yhsif.com/url2epub/appengine
 
-go 1.15
+go 1.16
 
 replace go.yhsif.com/url2epub => ../
 
