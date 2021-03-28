@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"strconv"
 
 	"go.yhsif.com/url2epub"
@@ -50,16 +51,34 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		UserAgent: ua,
 	})
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, fmt.Errorf(
+			"unable to get html for %q: %v",
+			url,
+			err,
+		)
 	}
 	if !root.IsAMP() {
 		if ampURL := root.GetAMPurl(); ampURL != "" {
+			// ampURL could be relative, resolve to full url
+			u, err := neturl.Parse(ampURL)
+			if err != nil {
+				return "", "", nil, fmt.Errorf(
+					"unable to parse amp url %q: %w",
+					ampURL,
+					err,
+				)
+			}
+			ampURL = baseURL.ResolveReference(u).String()
 			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
 				URL:       ampURL,
 				UserAgent: ua,
 			})
 			if err != nil {
-				return "", "", nil, err
+				return "", "", nil, fmt.Errorf(
+					"unable to get amp html for %q: %v",
+					ampURL,
+					err,
+				)
 			}
 		}
 	}
@@ -78,11 +97,18 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		},
 	})
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, fmt.Errorf(
+			"unable to generate readable html: %w",
+			err,
+		)
 	}
 	if node == nil {
 		// Should not happen
-		return "", "", nil, errUnsupportedURL
+		return "", "", nil, fmt.Errorf(
+			"%w: %q",
+			errUnsupportedURL,
+			url,
+		)
 	}
 
 	buf := new(bytes.Buffer)
@@ -94,5 +120,8 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		Node:   node,
 		Images: images,
 	})
+	if err != nil {
+		err = fmt.Errorf("unable to create epub: %w", err)
+	}
 	return
 }
