@@ -17,7 +17,7 @@ import (
 	"go.yhsif.com/url2epub/ziputil"
 )
 
-// EpubContentType is the mime type for epub
+// EpubMimeType is the mime type for epub.
 const EpubMimeType = `application/epub+zip`
 
 const (
