@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	tokenID = "telegram-token"
-	redisID = "redis-url"
+	tokenID       = "telegram-token"
+	twitterBearer = "twitter-bearer"
 
 	nameTemplate = "projects/%s/secrets/%s/versions/latest"
 )

@@ -41,6 +41,11 @@ var (
 		false,
 		"Grayscale images.",
 	)
+	bearer = flag.String(
+		"bearer",
+		"",
+		"Twitter bearer token",
+	)
 )
 
 func main() {
@@ -71,8 +76,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-		URL:       *url,
-		UserAgent: *ua,
+		URL:           *url,
+		UserAgent:     *ua,
+		TwitterBearer: *bearer,
 	})
 	if err != nil {
 		log.Fatal(err)

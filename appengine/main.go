@@ -56,6 +56,7 @@ func main() {
 		)
 	}
 	initBot(ctx)
+	initTwitter(ctx)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
@@ -192,6 +193,25 @@ func initBot(ctx context.Context) {
 
 func getBot() *tgbot.Bot {
 	return tokenValue.Load().(*tgbot.Bot)
+}
+
+var twitterBearerValue atomic.Value
+
+// initTwitter initializes botToken.
+func initTwitter(ctx context.Context) {
+	secret, err := getSecret(ctx, twitterBearer)
+	if err != nil {
+		l(ctx).Errorw(
+			"Failed to get twitter bearer secret",
+			"err", err,
+		)
+	}
+	twitterBearerValue.Store(secret)
+}
+
+func getTwitterBearer() string {
+	s, _ := twitterBearerValue.Load().(string)
+	return s
 }
 
 func getProjectID() string {
