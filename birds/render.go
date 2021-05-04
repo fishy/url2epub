@@ -11,9 +11,11 @@ func (t *Tweet) RenderHTML(photos Photos) string {
 	entities := t.Entities.sort()
 	runes := []rune(t.Text)
 	for _, e := range entities {
-		replaced := runes[:e.getStart()]
-		replaced = append(replaced, []rune(e.render())...)
-		replaced = append(replaced, runes[e.getEnd():]...)
+		rendered := []rune(e.render())
+		replaced := make([]rune, e.getStart()+len(rendered)+len(runes)-e.getEnd())
+		copy(replaced, runes[:e.getStart()])
+		copy(replaced[e.getStart():], rendered)
+		copy(replaced[e.getStart()+len(rendered):], runes[e.getEnd():])
 		runes = replaced
 	}
 	text := string(runes)
