@@ -50,7 +50,7 @@ type GetHTMLArgs struct {
 	TwitterBearer string
 }
 
-var twitterRE = regexp.MustCompile(`^https://twitter.com/.*/status/(\d*)$`)
+var twitterRE = regexp.MustCompile(`^.*/status/(\d*)$`)
 
 // GetHTML does HTTP get requests on HTML content.
 //
@@ -72,8 +72,8 @@ func GetHTML(ctx context.Context, args GetHTMLArgs) (*Node, *url.URL, error) {
 	}
 
 	var reader io.Reader
-	if args.TwitterBearer != "" {
-		if matches := twitterRE.FindStringSubmatch(args.URL); len(matches) > 0 {
+	if args.TwitterBearer != "" && (src.Host == "twitter.com" || strings.HasSuffix(src.Host, ".twitter.com")) {
+		if matches := twitterRE.FindStringSubmatch(src.Path); len(matches) > 0 {
 			s := birds.Session{
 				Bearer:    args.TwitterBearer,
 				UserAgent: args.UserAgent,
@@ -84,7 +84,8 @@ func GetHTML(ctx context.Context, args GetHTMLArgs) (*Node, *url.URL, error) {
 			}
 			reader = strings.NewReader(text)
 		}
-	} else {
+	}
+	if reader == nil {
 		body, lastURL, err := get(ctx, src, args.UserAgent)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to get %q: %w", args.URL, err)
