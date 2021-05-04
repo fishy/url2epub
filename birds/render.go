@@ -10,7 +10,15 @@ func (t *Tweet) RenderHTML(photos Photos) string {
 	// First, replace all urls and mentions
 	entities := t.Entities.sort()
 	runes := []rune(t.Text)
+	var lastStart int
 	for _, e := range entities {
+		// When more than 1 images are attached,
+		// twitter might give us duplicated url entities.
+		if e.getStart() == lastStart {
+			continue
+		}
+		lastStart = e.getStart()
+
 		rendered := []rune(e.render())
 		replaced := make([]rune, e.getStart()+len(rendered)+len(runes)-e.getEnd())
 		copy(replaced, runes[:e.getStart()])
