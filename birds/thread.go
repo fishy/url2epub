@@ -72,7 +72,6 @@ type User struct {
 type Users = map[string]*User
 
 const (
-	searchQuery   = `conversation_id:%s from:%s to:%s`
 	tweetTemplate = `https://api.twitter.com/2/tweets/%s?`
 
 	conversationURL = `https://api.twitter.com/2/tweets/search/recent?`
@@ -130,8 +129,13 @@ func (s *Session) Thread(ctx context.Context, id string) (string, error) {
 		includes = orig.Includes
 		slice = []*Tweet{orig.Data}
 	} else {
+		first, err := s.singleTweet(ctx, orig.Data.ConversationID.String())
+		if err != nil {
+			return "", fmt.Errorf("failed to get the first tweet %s: %w", orig.Data.ConversationID.String(), err)
+		}
+		includes.Media = append(includes.Media, first.Includes.Media...)
+		slice = append(slice, first.Data)
 		slice = append(slice, result.Data...)
-		slice = append(slice, result.Includes.Tweets...)
 		sort.Slice(slice, func(i, j int) bool {
 			ii, _ := slice[i].ID.Int64()
 			ij, _ := slice[j].ID.Int64()
@@ -198,6 +202,11 @@ func threader(all []*Tweet) []*Tweet {
 	firstID := first.ID.String()
 	var max []*Tweet
 	for i := 1; i < len(all); i++ {
+		if len(all)-i < len(max) {
+			// Can no longer be a longer thread
+			break
+		}
+
 		var repliedToFirst bool
 		for _, ref := range all[i].ReferencedTweets {
 			if ref.Type != "replied_to" {
@@ -211,10 +220,7 @@ func threader(all []*Tweet) []*Tweet {
 		if !repliedToFirst {
 			continue
 		}
-		if len(all)-i < len(max) {
-			// Can no longer be a longer thread
-			break
-		}
+
 		thread := threader(all[i:])
 		if len(thread) > len(max) {
 			max = thread
