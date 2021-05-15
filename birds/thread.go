@@ -104,6 +104,7 @@ func (s *Session) Thread(ctx context.Context, id string) (string, error) {
 				"from:" + orig.Data.AuthorID.String(),
 				"to:" + orig.Data.AuthorID.String(),
 			}, " ")},
+			"max_results": []string{"100"},
 		}).Encode(),
 		nil,
 	)
