@@ -84,9 +84,61 @@ type Includes struct {
 	Media  []*Media `json:"media,omitempty"`
 }
 
+func (i *Includes) merge(n Includes) {
+	i.Tweets = append(i.Tweets, n.Tweets...)
+	i.Users = append(i.Users, n.Users...)
+	i.Media = append(i.Media, n.Media...)
+}
+
+// Meta represents the metadata portion of a twitter api response.
+type Meta struct {
+	NextToken string `json:"next_token,omitempty"`
+}
+
 type queryResult struct {
 	Data     []*Tweet `json:"data"`
-	Includes Includes `json:"Includes"`
+	Includes Includes `json:"includes"`
+	Meta     Meta     `json:"meta"`
+}
+
+func (r *queryResult) merge(n *queryResult) {
+	r.Data = append(r.Data, n.Data...)
+	r.Includes.merge(n.Includes)
+}
+
+func (s *Session) singleQuery(ctx context.Context, orig *tweet, nextToken string) (*queryResult, error) {
+	queries := url.Values{
+		"query": []string{strings.Join([]string{
+			"conversation_id:" + orig.Data.ConversationID.String(),
+			"from:" + orig.Data.AuthorID.String(),
+			"to:" + orig.Data.AuthorID.String(),
+		}, " ")},
+		"max_results": []string{"100"},
+	}
+	if nextToken != "" {
+		queries.Set("next_token", nextToken)
+	}
+	req, err := http.NewRequest(
+		http.MethodGet,
+		conversationURL+AddTwitterQuery(queries).Encode(),
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	resp, err := s.Do(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("http request failed: %w", err)
+	}
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+	var result queryResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode json: %w", err)
+	}
+	return &result, nil
 }
 
 // Thread generates HTML of a twitter thread from a single tweet id.
@@ -96,32 +148,18 @@ func (s *Session) Thread(ctx context.Context, id string) (string, error) {
 		return "", fmt.Errorf("failed to get the original tweet: %w", err)
 	}
 
-	req, err := http.NewRequest(
-		http.MethodGet,
-		conversationURL+AddTwitterQuery(url.Values{
-			"query": []string{strings.Join([]string{
-				"conversation_id:" + orig.Data.ConversationID.String(),
-				"from:" + orig.Data.AuthorID.String(),
-				"to:" + orig.Data.AuthorID.String(),
-			}, " ")},
-			"max_results": []string{"100"},
-		}).Encode(),
-		nil,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	resp, err := s.Do(ctx, req)
-	if err != nil {
-		return "", fmt.Errorf("http request failed: %w", err)
-	}
-	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-	}()
+	var nextToken string
 	var result queryResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode json: %w", err)
+	for {
+		next, err := s.singleQuery(ctx, orig, nextToken)
+		if err != nil {
+			return "", err
+		}
+		result.merge(next)
+		nextToken = next.Meta.NextToken
+		if nextToken == "" {
+			break
+		}
 	}
 
 	includes := result.Includes
@@ -134,7 +172,7 @@ func (s *Session) Thread(ctx context.Context, id string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get the first tweet %s: %w", orig.Data.ConversationID.String(), err)
 		}
-		includes.Media = append(includes.Media, first.Includes.Media...)
+		includes.merge(first.Includes)
 		slice = append(slice, first.Data)
 		slice = append(slice, result.Data...)
 		sort.Slice(slice, func(i, j int) bool {
