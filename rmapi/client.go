@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	registerURL = `https://my.remarkable.com/token/json/2/device/new`
-	refreshURL  = `https://my.remarkable.com/token/json/2/user/new`
+	registerURL = `https://webapp-production-dot-remarkable-production.appspot.com/token/json/2/device/new`
+	refreshURL  = `https://webapp-production-dot-remarkable-production.appspot.com/token/json/2/user/new`
 )
 
 // RegisterArgs defines args to be used with Register.
