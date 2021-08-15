@@ -75,6 +75,7 @@ var atoms = map[atom.Atom]immutable.Set{
 	atom.Mark:       immutable.EmptySet,
 	atom.Ol:         immutable.EmptySet,
 	atom.P:          immutable.EmptySet,
+	atom.Picture:    immutable.EmptySet,
 	atom.Pre:        immutable.EmptySet,
 	atom.Q:          immutable.EmptySet,
 	atom.S:          immutable.EmptySet,
