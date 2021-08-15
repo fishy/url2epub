@@ -165,7 +165,7 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 	if err != nil {
 		return fmt.Errorf("rmapi.Upload: update http request failed: %w", err)
 	}
-	item, err = parseResponse(resp)
+	_, err = parseResponse(resp)
 	if err != nil {
 		return fmt.Errorf("rmapi.Upload: %w", err)
 	}

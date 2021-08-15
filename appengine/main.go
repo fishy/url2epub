@@ -23,8 +23,6 @@ const (
 const (
 	webhookMaxConn = 5
 
-	errNoToken = "no telebot token"
-
 	globalURLPrefix = `https://url2epub.appspot.com`
 	webhookPrefix   = `/w/`
 

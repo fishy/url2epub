@@ -77,7 +77,6 @@ type Client struct {
 	Logger logger.Logger
 
 	token string
-	host  string
 }
 
 // Refresh refreshes the token.

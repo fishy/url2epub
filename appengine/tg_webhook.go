@@ -53,6 +53,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 		return
 	}
 	var url string
+breakFor:
 	for _, entity := range message.Entities {
 		switch entity.Type {
 		case "url":
@@ -66,10 +67,10 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, mes
 				continue
 			}
 			url = string(runes[entity.Offset : entity.Offset+entity.Length])
-			break
+			break breakFor
 		case "text_link":
 			url = entity.URL
-			break
+			break breakFor
 		}
 	}
 	if url == "" {
@@ -311,20 +312,6 @@ func replyMessage(
 	}
 	if quote {
 		reply.ReplyTo = orig.ID
-	}
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
-}
-
-func replyCallback(
-	ctx context.Context,
-	w http.ResponseWriter,
-	orig *tgbot.CallbackQuery,
-	msg string,
-) {
-	reply := tgbot.AnswerCallbackQuery{
-		ID:   orig.ID,
-		Text: msg,
 	}
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
