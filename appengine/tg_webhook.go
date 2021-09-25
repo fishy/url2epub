@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -216,6 +217,9 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 			},
 		})
 	}
+	sort.Slice(choices, func(i, j int) bool {
+		return choices[i][0].Text < choices[j][0].Text
+	})
 	replyMessage(
 		ctx,
 		w,
