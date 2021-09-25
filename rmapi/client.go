@@ -21,8 +21,8 @@ const (
 
 // RegisterArgs defines args to be used with Register.
 type RegisterArgs struct {
-	// A token got from either https://my.remarkable.com/connect/desktop or
-	// https://my.remarkable.com/connect/mobile, usually with length of 8.
+	// A token got from either https://my.remarkable.com/device/desktop/connect or
+	// https://my.remarkable.com/device/mobile/connect, usually with length of 8.
 	Token string
 
 	// A description of this device, usually something like "desktop-linux",

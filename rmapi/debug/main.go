@@ -24,7 +24,7 @@ var (
 	token = flag.String(
 		"token",
 		"",
-		"The (usually 8 characters long) token you got from https://my.remarkable.com/connect/desktop. Exactly one of refresh-token and token is required.",
+		"The (usually 8 characters long) token you got from https://my.remarkable.com/device/desktop/connect. Exactly one of refresh-token and token is required.",
 	)
 	timeout = flag.Duration(
 		"timeout",

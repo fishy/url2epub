@@ -20,17 +20,17 @@ import (
 )
 
 const (
-	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/connect/desktop.`
+	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/device/desktop/connect.`
 	startSaveErr = `🚫 Failed to save this registration. Please try again later.`
-	startExplain = `ℹ️ To link your reMarkable account, go to https://my.remarkable.com/connect/desktop, copy the 8-digit code, and come back to type "` + startCommand + ` <8-digit code>"`
-	startSuccess = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/list/desktop).
+	startExplain = `ℹ️ To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` <8-digit code>"`
+	startSuccess = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/device/desktop).
 By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
 
 	notStartedMsg = `🚫 You did not run ` + startCommand + ` command yet.`
 
 	stopMsg = `✅ Successfully deleted your reMarkable token.
-You can now go to https://my.remarkable.com/list/desktop to revoke access.`
+You can now go to https://my.remarkable.com/device/desktop to revoke access.`
 
 	dirMsg        = `You are currently saving to "%s", please choose a new directory to save to:`
 	dirErrMsg     = `🚫 Failed to list directories. Please try again later.`
