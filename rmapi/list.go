@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"path"
+	"strings"
 
 	"go.yhsif.com/url2epub"
 )
@@ -13,47 +13,75 @@ import (
 // RootDisplayName is the display name to be used by the root directory.
 var RootDisplayName = "<ROOT>"
 
-const listRequestURL = `/document-storage/json/2/docs`
-
 // ListDirs lists all the directories user created on their reMarkable account.
 //
 // The returned map is in format of <id> -> <display name>.
 // When error is nil, the map is guaranteed to have at least an entry of
 // "" -> RootDisplayName.
 func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
-	url := c.createRequestURL(listRequestURL)
-	if ctx.Err() != nil {
-		return nil, fmt.Errorf("rmapi.ListDirs: %w", ctx.Err())
-	}
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL:    url,
-	}
-	req = req.WithContext(ctx)
-	if err := c.setAuthHeader(ctx, req); err != nil {
+	rootEntries, _, err := c.DownloadRoot(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("rmapi.ListDirs: %w", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("rmapi.ListDirs: http request failed: %w", err)
-	}
-	defer url2epub.DrainAndClose(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("rmapi.ListDirs: http status: %s", resp.Status)
-	}
-	var data []ItemInfo
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, fmt.Errorf("rmapi.ListDirs: failed to decode json payload: %w", err)
-	}
-	items := make(map[string]*ItemInfo)
-	for _, _item := range data {
-		item := _item
-		if err := item.IsSuccess(); err != nil {
-			c.Logger.Log(err.Error())
+	items := make(map[string]*Metadata)
+	for _, entry := range rootEntries {
+		if entry.NumFiles > 2 {
+			// Directories should ot have more than 2 files (metadata + empty content
+			// file), so we can skip every root entry with >2 files to save some
+			// requests.
 			continue
 		}
-		if item.Type == "CollectionType" {
-			items[item.ID] = &item
+		indexEntries, err := c.DownloadIndex(ctx, entry.Path)
+		if err != nil {
+			c.Logger.Log(fmt.Sprintf(
+				"rmapi.ListDirs: failed to download index file for path %q and uuid %q: %v",
+				entry.Path,
+				entry.Filename,
+				err,
+			))
+			continue
+		}
+		var metadataFound bool
+		for _, index := range indexEntries {
+			if !strings.HasSuffix(index.Filename, MetadataSuffix) {
+				continue
+			}
+			resp, err := c.Download15(ctx, index.Path)
+			if err != nil {
+				c.Logger.Log(fmt.Sprintf(
+					"rmapi.ListDirs: failed to download %s file for index %+v: %v",
+					MetadataSuffix,
+					index,
+					err,
+				))
+				continue
+			}
+			var meta Metadata
+			if err := func() error {
+				defer url2epub.DrainAndClose(resp.Body)
+				return json.NewDecoder(resp.Body).Decode(&meta)
+			}(); err != nil {
+				c.Logger.Log(fmt.Sprintf(
+					"rmapi.ListDirs: failed to parse %s file for index %+v: %v",
+					MetadataSuffix,
+					index,
+					err,
+				))
+				continue
+			}
+			metadataFound = true
+			if meta.Type == "CollectionType" {
+				items[entry.Filename] = &meta
+			}
+			break
+		}
+		if !metadataFound {
+			c.Logger.Log(fmt.Sprintf(
+				"rmapi.ListDirs: no %s file found for %+v: %v",
+				MetadataSuffix,
+				entry,
+				err,
+			))
 		}
 	}
 	m := make(map[string]string)
@@ -64,7 +92,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 	return m, nil
 }
 
-func resolveName(k string, items map[string]*ItemInfo, m map[string]string) string {
+func resolveName(k string, items map[string]*Metadata, m map[string]string) string {
 	if m[k] != "" {
 		return m[k]
 	}

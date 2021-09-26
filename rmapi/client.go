@@ -132,3 +132,11 @@ func (c *Client) setAuthHeader(ctx context.Context, req *http.Request) error {
 	req.Header.Set("authorization", "Bearer "+c.token)
 	return nil
 }
+
+// Do executes an http request with ctx and bearer token attached.
+func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	if err := c.setAuthHeader(ctx, req); err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req.WithContext(ctx))
+}

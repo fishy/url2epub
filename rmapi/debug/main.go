@@ -43,6 +43,11 @@ var (
 		"",
 		"The title of the uploaded file.",
 	)
+	parent = flag.String(
+		"parent",
+		"",
+		"Parent directory uuid.",
+	)
 )
 
 func main() {
@@ -111,10 +116,13 @@ func doUpload(ctx context.Context, client *rmapi.Client) error {
 
 	log.Printf("Uploading using id %q", id.String())
 
-	return client.Upload(ctx, rmapi.UploadArgs{
-		ID:    id.String(),
-		Title: title,
-		Data:  f,
-		Type:  fileType,
+	generation, err := client.Upload(ctx, rmapi.UploadArgs{
+		ID:       id.String(),
+		Title:    title,
+		Data:     f,
+		Type:     fileType,
+		ParentID: *parent,
 	})
+	log.Printf("new root generation: %s", generation)
+	return err
 }

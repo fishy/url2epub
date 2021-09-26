@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	epubTimeout   = time.Second * 5
-	uploadTimeout = time.Second * 5
+	epubTimeout   = time.Second * 15
+	uploadTimeout = time.Second * 15
 )
 
 const (
