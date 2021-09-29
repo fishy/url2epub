@@ -28,9 +28,7 @@ const (
 )
 
 // Upload uploads a document to reMarkable.
-//
-// It returns the new root generation for debugging.
-func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
+func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 	now := time.Now()
 	var entries []IndexEntry
 
@@ -44,11 +42,11 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(meta); err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to json encode for %s: %w", metaName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to json encode for %s: %w", metaName, err)
 	}
 	metaPath, metaSize, err := c.Upload15(ctx, buf)
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", metaName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", metaName, err)
 	}
 	entries = append(entries, IndexEntry{
 		Path:     metaPath,
@@ -60,11 +58,11 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 	contentName := args.ID + ".content"
 	content, err := args.Type.InitialContent(args.ContentArgs)
 	if err != nil {
-		return "", fmt.Errorf("unable to create %s: %w", contentName, err)
+		return fmt.Errorf("unable to create %s: %w", contentName, err)
 	}
 	contentPath, contentSize, err := c.Upload15(ctx, strings.NewReader(content))
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", contentName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", contentName, err)
 	}
 	entries = append(entries, IndexEntry{
 		Path:     contentPath,
@@ -76,7 +74,7 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 	pagedataName := args.ID + ".pagedata"
 	pagedataPath, pagedataSize, err := c.Upload15(ctx, strings.NewReader(defaultPagedata))
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", pagedataName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", pagedataName, err)
 	}
 	entries = append(entries, IndexEntry{
 		Path:     pagedataPath,
@@ -87,11 +85,11 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 
 	fileName := args.ID + args.Type.Ext()
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to generate gcs path for %s: %w", fileName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to generate gcs path for %s: %w", fileName, err)
 	}
 	filePath, fileSize, err := c.Upload15(ctx, args.Data)
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", fileName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", fileName, err)
 	}
 	entries = append(entries, IndexEntry{
 		Path:     filePath,
@@ -103,7 +101,7 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 	indexName := args.ID
 	indexPath, _, err := c.Upload15(ctx, GenerateIndex(entries))
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", indexName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", indexName, err)
 	}
 	newEntry := IndexEntry{
 		Path:     indexPath,
@@ -114,12 +112,12 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) (string, error) {
 
 	rootEntries, generation, err := c.DownloadRoot(ctx)
 	if err != nil {
-		return "", fmt.Errorf("rmapi.Client.Upload: failed to get current root: %w", err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to get current root: %w", err)
 	}
 	rootEntries = append(rootEntries, newEntry)
 	rootPath, _, err := c.Upload15(ctx, GenerateIndex(rootEntries))
 	if err != nil {
-		return generation, fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", indexName, err)
+		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", indexName, err)
 	}
-	return generation, c.UpdateRoot(ctx, generation, rootPath)
+	return c.UpdateRoot(ctx, generation, rootPath)
 }

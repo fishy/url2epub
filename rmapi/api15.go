@@ -14,7 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
+
+	"go.yhsif.com/immutable"
 
 	"go.yhsif.com/url2epub"
 )
@@ -33,8 +34,7 @@ const (
 	IndexEntryUnused1Magic = "0"
 
 	// http headers
-	HeaderRootGeneration    = "x-goog-generation"
-	HeaderGenerationRequest = "x-goog-if-generation-match"
+	HeaderRootGeneration = "x-goog-generation"
 
 	// magic numbers
 	NumEntrySplit = 5
@@ -45,17 +45,48 @@ const (
 type APIRequest struct {
 	Method string `json:"http_method"`
 	Path   string `json:"relative_path"`
+
+	// Should only be set for the request to update root.
+	Generation string `json:"generatio,omitempty"`
 }
 
 // APIResponse defines the response json format for reMarkable 1.5 API.
-type APIResponse struct {
-	Path    string    `json:"relative_path"`
-	URL     string    `json:"url"`
-	Expires time.Time `json:"expires"`
-	Method  string    `json:"method"`
+type APIResponse map[string]string
+
+// APIResponse special keys
+const (
+	APIResponseKeyPath    = "relative_path"
+	APIResponseKeyURL     = "url"
+	APIResponseKeyMethod  = "method"
+	APIResponseKeyExpires = "expires"
+)
+
+// APIResponseNonHeaderKeys are the keys in APIResponse that should not be put
+// into request header.
+var APIResponseNonHeaderKeys = immutable.SetLiteral(
+	APIResponseKeyPath,
+	APIResponseKeyURL,
+	APIResponseKeyMethod,
+	APIResponseKeyExpires,
+)
+
+// ToRequest creates http request from the API response.
+func (resp APIResponse) ToRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, resp[APIResponseKeyMethod], resp[APIResponseKeyURL], body)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range resp {
+		if APIResponseNonHeaderKeys.Contains(k) {
+			continue
+		}
+		req.Header.Set(k, v)
+	}
+	return req, nil
 }
 
-// Download15 downloads a file in reMarkable 1.5 API via its GCS path.
+// Download15 is the "low-level" api that downloads a file in reMarkable Cloud
+// API 1.5 via its GCS path.
 func (c *Client) Download15(ctx context.Context, path string) (*http.Response, error) {
 	payload := APIRequest{
 		Method: http.MethodGet,
@@ -78,7 +109,7 @@ func (c *Client) Download15(ctx context.Context, path string) (*http.Response, e
 	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to json decode api response: %w", err)
 	}
-	req, err = http.NewRequest(respPayload.Method, respPayload.URL, nil)
+	req, err = respPayload.ToRequest(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to create gcs request: %w", err)
 	}
@@ -178,7 +209,7 @@ var bufPool = sync.Pool{
 	},
 }
 
-// Upload15 uploads a file in reMarkable 1.5 API.
+// Upload15 is the "low-level" api that uploads a file in reMarkable Cloud API 1.5.
 //
 // It returns the GCS path (sha256 of the content) and the size.
 func (c *Client) Upload15(ctx context.Context, content io.Reader) (path string, size int64, err error) {
@@ -220,12 +251,9 @@ func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content i
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to json decode api response: %w", err)
 	}
-	req, err = http.NewRequestWithContext(ctx, payload.Method, payload.URL, content)
+	req, err = payload.ToRequest(ctx, content)
 	if err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to create GCS upload request: %w", err)
-	}
-	if generation != "" {
-		req.Header.Set(HeaderGenerationRequest, generation)
 	}
 	resp, err = http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
@@ -264,12 +292,7 @@ func GenerateIndex(entries []IndexEntry) *bytes.Buffer {
 // UpdateRoot updates the root file with the given path to the previously
 // uploaded new root index.
 func (c *Client) UpdateRoot(ctx context.Context, generation string, path string) error {
-	type rootPayload struct {
-		Generation string `json:"generation"`
-		Method     string `json:"http_method"`
-		Path       string `json:"relative_path"`
-	}
-	payload := rootPayload{
+	payload := APIRequest{
 		Generation: generation,
 		Method:     http.MethodPut,
 		Path:       "root",

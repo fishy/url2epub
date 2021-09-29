@@ -110,7 +110,7 @@ breakFor:
 	}()
 	ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
 	defer cancel()
-	generation, err := client.Upload(ctx, rmapi.UploadArgs{
+	err = client.Upload(ctx, rmapi.UploadArgs{
 		ID:       id,
 		Title:    title,
 		Data:     data,
@@ -125,7 +125,6 @@ breakFor:
 			"urlHandler: Upload failed",
 			"url", url,
 			"err", err,
-			"generation", generation,
 		)
 		replyMessage(ctx, w, message, fmt.Sprintf(failedUpload, url), true, nil)
 		return
@@ -136,7 +135,6 @@ breakFor:
 		"epub size", size,
 		"id", id,
 		"title", title,
-		"generation", generation,
 	)
 }
 
