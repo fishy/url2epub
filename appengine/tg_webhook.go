@@ -164,7 +164,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Chat:  message.Chat.ID,
 		Token: client.RefreshToken,
 	}
-	if err := chat.SaveDatastore(ctx); err != nil {
+	if err := chat.Save(ctx); err != nil {
 		l(ctx).Errorw(
 			"startHandler: Unable to save chat",
 			"err", err,
@@ -255,7 +255,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		return
 	}
 	chat.ParentID = data
-	if err := chat.SaveDatastore(ctx); err != nil {
+	if err := chat.Save(ctx); err != nil {
 		l(ctx).Errorw(
 			"dirCallbackHandler: Unable to save chat",
 			"err", err,

@@ -7,9 +7,8 @@ p=url2epub
 deploy:
 	$(GO) mod tidy
 	$(GO) mod vendor
-	$(GO) build
-	rm appengine
-	$(GCLOUD) app deploy --project=$(p)
+	$(GO) test
+	$(GCLOUD) beta app deploy --project=$(p)
 	rm -Rf vendor/
 
 tail:

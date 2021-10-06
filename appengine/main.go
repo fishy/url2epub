@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/appengine/v2"
 
 	"go.yhsif.com/url2epub/tgbot"
 )
@@ -56,28 +57,11 @@ func main() {
 	initBot(ctx)
 	initTwitter(ctx)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", rootHandler)
-	mux.HandleFunc(webhookPrefix, webhookHandler)
-	mux.HandleFunc("/epub", restEpubHandler)
-	mux.HandleFunc("/_ah/health", healthCheckHandler)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		l(ctx).Infow(
-			"Using default port",
-			"port", port,
-		)
-	}
-	l(ctx).Infow(
-		"Start listening",
-		"port", port,
-	)
-	l(ctx).Errorw(
-		"HTTP listener returned",
-		"err", http.ListenAndServe(fmt.Sprintf(":%s", port), mux),
-	)
+	http.HandleFunc("/", rootHandler)
+	http.HandleFunc(webhookPrefix, webhookHandler)
+	http.HandleFunc("/epub", restEpubHandler)
+	http.HandleFunc("/_ah/health", healthCheckHandler)
+	appengine.Main()
 }
 
 func initDatastoreClient(ctx context.Context) error {

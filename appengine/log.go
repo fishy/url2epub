@@ -7,6 +7,7 @@ import (
 	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/appengine/v2"
 )
 
 func initLogger() {
@@ -31,7 +32,7 @@ func l(ctx context.Context) *zap.SugaredLogger {
 }
 
 func logContext(r *http.Request) context.Context {
-	return context.WithValue(r.Context(), zapKey, zap.S().With(
+	return context.WithValue(appengine.NewContext(r), zapKey, zap.S().With(
 		zapdriver.HTTP(&zapdriver.HTTPPayload{
 			RequestMethod: r.Method,
 			UserAgent:     r.UserAgent(),

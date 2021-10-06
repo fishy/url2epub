@@ -121,7 +121,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 		return
 	}
 	chat.Font = data
-	if err := chat.SaveDatastore(ctx); err != nil {
+	if err := chat.Save(ctx); err != nil {
 		l(ctx).Errorw(
 			"Unable to save chat",
 			"err", err,

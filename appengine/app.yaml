@@ -1,5 +1,6 @@
 runtime: go116
 instance_class: F1
+app_engine_apis: true
 
 automatic_scaling:
   min_pending_latency: 50ms
