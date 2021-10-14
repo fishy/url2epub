@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"go.yhsif.com/immutable"
 
@@ -51,7 +52,16 @@ type APIRequest struct {
 }
 
 // APIResponse defines the response json format for reMarkable 1.5 API.
-type APIResponse map[string]string
+type APIResponse struct {
+	Path    string
+	URL     string
+	Method  string
+	Expires time.Time
+
+	Headers map[string]string
+}
+
+var _ json.Unmarshaler = (*APIResponse)(nil)
 
 // APIResponse special keys
 const (
@@ -61,25 +71,52 @@ const (
 	APIResponseKeyExpires = "expires"
 )
 
-// APIResponseNonHeaderKeys are the keys in APIResponse that should not be put
-// into request header.
-var APIResponseNonHeaderKeys = immutable.SetLiteral(
+var responseNonHeaderKeys = immutable.SetLiteral(
 	APIResponseKeyPath,
 	APIResponseKeyURL,
 	APIResponseKeyMethod,
 	APIResponseKeyExpires,
 )
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (resp *APIResponse) UnmarshalJSON(data []byte) error {
+	fmt.Println("json: ", string(data))
+	var m map[string]string
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	var expires time.Time
+	expiresString := m[APIResponseKeyExpires]
+	if err := expires.UnmarshalJSON([]byte(`"` + expiresString + `"`)); err != nil {
+		return fmt.Errorf(
+			"rmapi.APIResponse.UnmarshalJSON: failed to decode %q: %w",
+			APIResponseKeyExpires,
+			err,
+		)
+	}
+
+	resp.Path = m[APIResponseKeyPath]
+	resp.URL = m[APIResponseKeyURL]
+	resp.Method = m[APIResponseKeyMethod]
+	resp.Expires = expires
+
+	resp.Headers = make(map[string]string)
+	for k, v := range m {
+		if responseNonHeaderKeys.Contains(k) {
+			continue
+		}
+		resp.Headers[k] = v
+	}
+	return nil
+}
+
 // ToRequest creates http request from the API response.
 func (resp APIResponse) ToRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, resp[APIResponseKeyMethod], resp[APIResponseKeyURL], body)
+	req, err := http.NewRequestWithContext(ctx, resp.Method, resp.URL, body)
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range resp {
-		if APIResponseNonHeaderKeys.Contains(k) {
-			continue
-		}
+	for k, v := range resp.Headers {
 		req.Header.Set(k, v)
 	}
 	return req, nil
