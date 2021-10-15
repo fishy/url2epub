@@ -80,7 +80,6 @@ var responseNonHeaderKeys = immutable.SetLiteral(
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (resp *APIResponse) UnmarshalJSON(data []byte) error {
-	fmt.Println("json: ", string(data))
 	var m map[string]string
 	if err := json.Unmarshal(data, &m); err != nil {
 		return err
