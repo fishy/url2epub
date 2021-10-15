@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 )
 
 var client http.Client
@@ -207,7 +208,20 @@ func (s *Session) Thread(ctx context.Context, id string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("<html>\n<head>\n<title>")
 	sb.WriteString(title)
-	sb.WriteString("</title>\n</head>\n<body>\n<article>\n<h1>")
+	sb.WriteString("</title>\n")
+	// begin meta
+	sb.WriteString(`<meta itemprop="generated-by: https://pkg.go.dev/go.yhsif.com/url2epub/birds#Session.Thread"/>`)
+	sb.WriteString("\n")
+	sb.WriteString(`<meta itemprop="generated-at: `)
+	sb.WriteString(time.Now().Format(time.RFC3339))
+	sb.WriteString("\"/>\n")
+	sb.WriteString(`<meta itemprop="generated-from: https://twitter.com/`)
+	sb.WriteString(author)
+	sb.WriteString("foo/status/")
+	sb.WriteString(id)
+	sb.WriteString("\"/>\n")
+	// end meta
+	sb.WriteString("</head>\n<body>\n<article>\n<h1>")
 	sb.WriteString("A twitter thread ")
 	if author != "" {
 		sb.WriteString(fmt.Sprintf(

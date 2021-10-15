@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"go.yhsif.com/immutable"
 	"golang.org/x/net/html"
@@ -159,6 +160,48 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 	)
 	if err != nil {
 		return nil, nil, err
+	}
+	if head == nil {
+		head = &html.Node{
+			Type:     html.ElementNode,
+			DataAtom: atom.Head,
+			Data:     atom.Head.String(),
+		}
+	}
+	head.AppendChild(&html.Node{
+		Type:     html.ElementNode,
+		DataAtom: atom.Meta,
+		Data:     atom.Meta.String(),
+		Attr: []html.Attribute{
+			{
+				Key: "itemprop",
+				Val: "generated-by: https://pkg.go.dev/go.yhsif.com/url2epub#Node.Readable",
+			},
+		},
+	})
+	head.AppendChild(&html.Node{
+		Type:     html.ElementNode,
+		DataAtom: atom.Meta,
+		Data:     atom.Meta.String(),
+		Attr: []html.Attribute{
+			{
+				Key: "itemprop",
+				Val: "generated-at: " + time.Now().Format(time.RFC3339),
+			},
+		},
+	})
+	if args.BaseURL != nil {
+		head.AppendChild(&html.Node{
+			Type:     html.ElementNode,
+			DataAtom: atom.Meta,
+			Data:     atom.Meta.String(),
+			Attr: []html.Attribute{
+				{
+					Key: "itemprop",
+					Val: "generated-from: " + args.BaseURL.String(),
+				},
+			},
+		})
 	}
 
 	var body *html.Node
