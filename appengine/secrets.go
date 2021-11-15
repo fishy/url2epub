@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
-	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 const (
