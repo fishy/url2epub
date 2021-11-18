@@ -40,7 +40,11 @@ const (
 	fontPrefix  = `font:`
 
 	restDocURL = `https://github.com/fishy/url2epub/blob/main/REST.md`
+
+	userAgentTemplate = "url2epub/%s"
 )
+
+var defaultUserAgent string
 
 var dsClient *datastore.Client
 
@@ -56,6 +60,8 @@ func main() {
 	}
 	initBot(ctx)
 	initTwitter(ctx)
+
+	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("GAE_VERSION"))
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc(webhookPrefix, webhookHandler)

@@ -78,7 +78,7 @@ breakFor:
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
-	id, title, data, err := getEpub(ctx, url, r.Header.Get("user-agent"), true)
+	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
 	if err != nil {
 		l(ctx).Errorw(
 			"urlHandler: getEpub failed",

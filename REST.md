@@ -9,8 +9,6 @@ Unless specified otherwise by the endpoint, all endpoints:
 
 1. Take both `GET` or `POST` requests
    - For `POST` requests, you need to use [form][form] instead of JSON.
-1. If the API involves outbounding HTTP requests,
-   those requests will carry the same `User-Agent` from the original request.
 1. Upon error, the response will be in plain text.
 1. Upon success, the response will be in JSON.
 
@@ -26,6 +24,7 @@ Generate an epub file from the given URL.
 | --- | --- | --- |
 | `url` | string | The URL of the article. |
 | `gray` | [bool][bool] | Whether to grayscale all images. |
+| `passthrough-user-agent` | [bool][bool] | Use the same `User-Agent` from the original request. |
 
 #### Response
 
