@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"go.yhsif.com/immutable"
 
@@ -85,7 +86,12 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	var expires time.Time
-	expiresString := m[APIResponseKeyExpires]
+	expiresString := strings.TrimFunc(m[APIResponseKeyExpires], func(r rune) bool {
+		if r == '"' {
+			return true
+		}
+		return unicode.IsSpace(r)
+	})
 	if err := expires.UnmarshalJSON([]byte(`"` + expiresString + `"`)); err != nil {
 		return fmt.Errorf(
 			"rmapi.APIResponse.UnmarshalJSON: failed to decode %q: %w",
