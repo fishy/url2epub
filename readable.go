@@ -273,6 +273,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 }
 
 var allowedSrcSchemes = immutable.SetLiteral(
+	"", // important for relative image urls
 	"https",
 	"http",
 )
