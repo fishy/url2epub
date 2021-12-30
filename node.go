@@ -111,14 +111,17 @@ func (n *Node) GetAMPurl() string {
 // GetTitle returns the title of the document, if any.
 //
 // Note that if og:title exists in the meta header, it's preferred over title.
-func (n *Node) GetTitle() string {
+func (n *Node) GetTitle() (title string) {
+	defer func() {
+		title = html.UnescapeString(title)
+	}()
+
 	head := n.FindFirstAtomNode(atom.Head)
 	if head == nil {
 		return ""
 	}
 
 	// Try to find og:title.
-	var ogTitle string
 	head.ForEachChild(func(cc *Node) bool {
 		c := cc.AsNode()
 		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
@@ -126,29 +129,28 @@ func (n *Node) GetTitle() string {
 		}
 		m := buildAttrMap(&c)
 		if m["property"] == "og:title" {
-			ogTitle = m["content"]
+			title = m["content"]
 			return false
 		}
 		return true
 	})
-	if ogTitle != "" {
-		return ogTitle
+	if title != "" {
+		return title
 	}
 
-	title := head.FindFirstAtomNode(atom.Title)
-	if title == nil {
+	titleNode := head.FindFirstAtomNode(atom.Title)
+	if titleNode == nil {
 		return ""
 	}
-	var found string
-	title.ForEachChild(func(cc *Node) bool {
+	titleNode.ForEachChild(func(cc *Node) bool {
 		c := cc.AsNode()
 		if c.Type == html.TextNode {
-			found = strings.TrimSpace(c.Data)
+			title = strings.TrimSpace(c.Data)
 			return false
 		}
 		return true
 	})
-	return found
+	return title
 }
 
 func buildAttrMap(node *html.Node) map[string]string {
