@@ -1,5 +1,5 @@
 runtime: go116
-instance_class: F2
+instance_class: F4
 app_engine_apis: true
 
 automatic_scaling:
