@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 
 	"go.yhsif.com/immutable"
 
@@ -59,6 +58,10 @@ type APIResponse struct {
 	Method  string
 	Expires time.Time
 
+	// It's possible the expires json value returned by reMarkable cloud cannot be
+	// parsed as a timestamp. In such case Expires will be zero time.
+	RawExpires string
+
 	Headers map[string]string
 }
 
@@ -85,25 +88,16 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return err
 	}
-	var expires time.Time
-	expiresString := strings.TrimFunc(m[APIResponseKeyExpires], func(r rune) bool {
-		if r == '"' {
-			return true
-		}
-		return unicode.IsSpace(r)
-	})
-	if err := expires.UnmarshalJSON([]byte(`"` + expiresString + `"`)); err != nil {
-		return fmt.Errorf(
-			"rmapi.APIResponse.UnmarshalJSON: failed to decode %q: %w",
-			APIResponseKeyExpires,
-			err,
-		)
-	}
 
 	resp.Path = m[APIResponseKeyPath]
 	resp.URL = m[APIResponseKeyURL]
 	resp.Method = m[APIResponseKeyMethod]
-	resp.Expires = expires
+
+	var expires time.Time
+	resp.RawExpires = m[APIResponseKeyExpires]
+	if err := expires.UnmarshalJSON([]byte(`"` + resp.RawExpires + `"`)); err == nil {
+		resp.Expires = expires
+	}
 
 	resp.Headers = make(map[string]string)
 	for k, v := range m {
@@ -112,6 +106,7 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 		}
 		resp.Headers[k] = v
 	}
+
 	return nil
 }
 
