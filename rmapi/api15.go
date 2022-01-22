@@ -110,6 +110,14 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Err checks for error returned by reMarkable cloud API.
+func (resp *APIResponse) Err() error {
+	if e, ok := resp.Headers["error"]; ok {
+		return fmt.Errorf("reMarkable cloud API returned error: %q", e)
+	}
+	return nil
+}
+
 // ToRequest creates http request from the API response.
 func (resp APIResponse) ToRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, resp.Method, resp.URL, body)
@@ -288,13 +296,16 @@ func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content i
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to json decode api response: %w", err)
 	}
+	if err := payload.Err(); err != nil {
+		return fmt.Errorf("rmapi.Client.upload15: %w", err)
+	}
 	req, err = payload.ToRequest(ctx, content)
 	if err != nil {
-		return fmt.Errorf("rmapi.Client.upload15: failed to create GCS upload request: %w", err)
+		return fmt.Errorf("rmapi.Client.upload15: failed to create GCS upload request: %w, payload: %+v", err, payload)
 	}
 	resp, err = http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("rmapi.Client.upload15: failed to execute GCS upload request: %w", err)
+		return fmt.Errorf("rmapi.Client.upload15: failed to execute GCS upload request: %w, payload: %+v", err, payload)
 	}
 	defer url2epub.DrainAndClose(resp.Body)
 	if resp.StatusCode != http.StatusOK {
