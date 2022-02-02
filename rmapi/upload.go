@@ -28,7 +28,7 @@ const (
 	// but starting from sometime around 2022-01-22 they stopped accepting the
 	// uploading of any empty files (with an "empty file" error in the upload api
 	// response), so we have to make it non-empty somehow.
-	defaultPagedata = "Blank\n"
+	defaultPagedata = "\n"
 )
 
 // Upload uploads a document to reMarkable.

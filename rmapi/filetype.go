@@ -31,25 +31,32 @@ func (ft FileType) Ext() string {
 
 var (
 	tmplEpub = template.Must(template.New("content").Parse(`{
- "fileType": "epub",
- "fontName": "{{.Font}}",
- "lineHeight": 100,
- "margins": 150,
- "orientation": "portrait",
- "textAlignment": "left",
- "textScale": 1,
- "transform": {}
+  "coverPageNumber": -1,
+  "documentMetadata": {},
+  "dummyDocument": false,
+  "extraMetadata": {},
+  "fileType": "epub",
+  "fontName": "{{.Font}}",
+  "lineHeight": 100,
+  "margins": 150,
+  "orientation": "portrait",
+  "originalPageCount": -1,
+  "pageCount": 0,
+  "redirectionPageMap": [],
+  "textAlignment": "left",
+  "textScale": 1,
+  "transform": {}
 }
 `))
 
 	tmplPdf = template.Must(template.New("content").Parse(`{
- "fileType": "pdf",
- "fontName": "{{.Font}}",
- "margins": 100,
- "orientation": "portrait",
- "textAlignment": "left",
- "textScale": 1,
- "transform": {}
+  "fileType": "pdf",
+  "fontName": "{{.Font}}",
+  "margins": 100,
+  "orientation": "portrait",
+  "textAlignment": "left",
+  "textScale": 1,
+  "transform": {}
 }
 `))
 )
