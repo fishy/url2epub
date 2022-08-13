@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
-	"google.golang.org/appengine/v2"
 
 	"go.yhsif.com/url2epub/tgbot"
 )
@@ -61,13 +60,34 @@ func main() {
 	initBot(ctx)
 	initTwitter(ctx)
 
-	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("GAE_VERSION"))
+	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("K_REVISION"))
+	l(ctx).Infow(
+		"default user agent",
+		"user-agent", defaultUserAgent,
+	)
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc(webhookPrefix, webhookHandler)
 	http.HandleFunc("/epub", restEpubHandler)
 	http.HandleFunc("/_ah/health", healthCheckHandler)
-	appengine.Main()
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		l(ctx).Warnw(
+			"Using default port",
+			"port", port,
+		)
+	}
+	l(ctx).Infow(
+		"Started listening",
+		"port", port,
+	)
+
+	l(ctx).Errorw(
+		"HTTP server returned",
+		"err", http.ListenAndServe(fmt.Sprintf(":%s", port), nil),
+	)
 }
 
 func initDatastoreClient(ctx context.Context) error {
@@ -151,17 +171,11 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, restDocURL, http.StatusTemporaryRedirect)
 }
 
-var tokenValue atomic.Value
+var tokenValue atomic.Pointer[tgbot.Bot]
 
 // initBot initializes botToken.
 func initBot(ctx context.Context) {
-	secret, err := getSecret(ctx, tokenID)
-	if err != nil {
-		l(ctx).Errorw(
-			"Failed to get token secret",
-			"err", err,
-		)
-	}
+	secret := os.Getenv("SECRET_TELEGRAM_TOKEN")
 	tokenValue.Store(&tgbot.Bot{
 		Token:           secret,
 		GlobalURLPrefix: globalURLPrefix,
@@ -170,8 +184,7 @@ func initBot(ctx context.Context) {
 			l(ctx).Info(msg)
 		},
 	})
-	_, err = getBot().SetWebhook(ctx, webhookMaxConn)
-	if err != nil {
+	if _, err := getBot().SetWebhook(ctx, webhookMaxConn); err != nil {
 		l(ctx).Fatalw(
 			"Failed to set webhook",
 			"err", err,
@@ -180,28 +193,25 @@ func initBot(ctx context.Context) {
 }
 
 func getBot() *tgbot.Bot {
-	return tokenValue.Load().(*tgbot.Bot)
+	return tokenValue.Load()
 }
 
-var twitterBearerValue atomic.Value
+var twitterBearerValue atomic.Pointer[string]
 
 // initTwitter initializes botToken.
 func initTwitter(ctx context.Context) {
-	secret, err := getSecret(ctx, twitterBearer)
-	if err != nil {
-		l(ctx).Errorw(
-			"Failed to get twitter bearer secret",
-			"err", err,
-		)
-	}
-	twitterBearerValue.Store(secret)
+	secret := os.Getenv("SECRET_TWITTER_BEARER")
+	twitterBearerValue.Store(&secret)
 }
 
 func getTwitterBearer() string {
-	s, _ := twitterBearerValue.Load().(string)
-	return s
+	s := twitterBearerValue.Load()
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func getProjectID() string {
-	return os.Getenv("GOOGLE_CLOUD_PROJECT")
+	return os.Getenv("CLOUD_PROJECT_ID")
 }
