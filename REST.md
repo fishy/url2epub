@@ -1,6 +1,6 @@
 # url2epub REST APIs
 
-This documentation describes how REST APIs on https://url2epub.appspot.com/
+This documentation describes how REST APIs on https://url2epub.fishy.me/
 work. For the [Telegram bot][bot], just talk to the bot from Telegram.
 
 ## Overview

@@ -24,7 +24,7 @@ const (
 const (
 	webhookMaxConn = 5
 
-	globalURLPrefix = `https://url2epub.appspot.com`
+	globalURLPrefix = `https://url2epub.fishy.me`
 	webhookPrefix   = `/w/`
 
 	rmDescription = `desktop-windows`
