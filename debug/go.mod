@@ -1,11 +1,14 @@
 module go.yhsif.com/url2epub/debug
 
-go 1.16
-
-replace go.yhsif.com/url2epub => ../
+go 1.19
 
 require (
 	go.yhsif.com/flagutils v0.2.0
-	go.yhsif.com/url2epub v0.0.0-00010101000000-000000000000
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	go.yhsif.com/url2epub v0.3.1
+	golang.org/x/net v0.0.0-20220812174116-3211cb980234
+)
+
+require (
+	github.com/google/uuid v1.3.0 // indirect
+	go.yhsif.com/immutable v0.2.0 // indirect
 )
