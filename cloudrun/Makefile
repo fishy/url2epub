@@ -11,6 +11,8 @@ secret_twitter_bearer=twitter-bearer
 
 gcloud=$(GCLOUD) --project=$(project)
 docker_image=$(region)-docker.pkg.dev/$(project)/$(image)/$(image)
+full_git_version=$(shell git rev-parse HEAD)
+version_tag=$(shell echo $(full_git_version) | cut -c1-12)
 
 .PHONY: deploy
 
@@ -24,6 +26,7 @@ deploy:
 		--allow-unauthenticated \
 		--region $(region) $(cloudrunname) \
 		--update-env-vars CLOUD_PROJECT_ID=$(project) \
+		--update-env-vars VERSION_TAG=$(version_tag) \
 		--set-secrets "SECRET_TELEGRAM_TOKEN=$(secret_telegram_token):latest,SECRET_TWITTER_BEARER=$(secret_twitter_bearer):latest"
 	rm -Rf vendor
 

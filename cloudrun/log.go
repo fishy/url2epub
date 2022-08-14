@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
@@ -15,6 +16,9 @@ func initLogger() {
 	logger, err := cfg.Build(zapdriver.WrapCore())
 	if err != nil {
 		panic(err)
+	}
+	if v, ok := os.LookupEnv("VERSION_TAG"); ok {
+		logger = logger.With(zap.String("v", v))
 	}
 	zap.ReplaceGlobals(logger)
 }
