@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	go.yhsif.com/flagutils v0.2.0
-	go.yhsif.com/url2epub v0.3.1
+	go.yhsif.com/url2epub v0.4.0
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234
 )
 
