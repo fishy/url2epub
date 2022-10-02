@@ -358,7 +358,15 @@ func (c *Client) UpdateRoot(ctx context.Context, generation string, path string)
 	}
 	defer url2epub.DrainAndClose(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("rmapi.Client.UpdateRoot: http status for sync-complete: %d/%s, %q", resp.StatusCode, resp.Status, readUpTo(resp.Body, 1024))
+		body := readUpTo(resp.Body, 1024)
+		if resp.StatusCode != http.StatusInternalServerError || !strings.Contains(body, "code = PermissionDenied") {
+			// Recently we start to get 500 error with body of:
+			//   "{\"error\":\"publish message: rpc error: code = PermissionDenied desc = User not authorized to perform this action.\"}\n"
+			// from sync-complete, but the syncing was still actually completed,
+			// so temporarily ignore that as an error until we found a better way to
+			// handle it.
+			return fmt.Errorf("rmapi.Client.UpdateRoot: http status for sync-complete: %d/%s, %q", resp.StatusCode, resp.Status, body)
+		}
 	}
 	return nil
 }
