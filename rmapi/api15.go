@@ -24,7 +24,7 @@ import (
 // Constants used in reMarkable 1.5 API.
 const (
 	// api urls
-	APIBase         = "https://rm-blob-storage-prod.appspot.com/api/v1"
+	APIBase         = "https://internal.cloud.remarkable.com/sync/v2"
 	APIDownload     = APIBase + "/signed-urls/downloads"
 	APIUpload       = APIBase + "/signed-urls/uploads"
 	APISyncComplete = APIBase + "/sync-complete"
@@ -46,9 +46,19 @@ const (
 type APIRequest struct {
 	Method string `json:"http_method"`
 	Path   string `json:"relative_path"`
+}
 
-	// Should only be set for the request to update root.
-	Generation string `json:"generatio,omitempty"`
+// UpdateRootRequest defines the request json format for reMarkable 1.5 API.
+type UpdateRootRequest struct {
+	Method     string `json:"http_method"`
+	Path       string `json:"relative_path"`
+	Generation int64  `json:"generation,omitempty"`
+	Root       string `json:"root_schema,omitempty"`
+}
+
+// SyncCompleteRequest is the payload for the request for sync-complete.
+type SyncCompleteRequest struct {
+	Generation int64 `json:"generation,omitempty"`
 }
 
 // APIResponse defines the response json format for reMarkable 1.5 API.
@@ -73,6 +83,8 @@ const (
 	APIResponseKeyURL     = "url"
 	APIResponseKeyMethod  = "method"
 	APIResponseKeyExpires = "expires"
+
+	APIResponseMaxUploadSizeBytes = "maxuploadsize_bytes"
 )
 
 var responseNonHeaderKeys = immutable.SetLiteral(
@@ -80,21 +92,24 @@ var responseNonHeaderKeys = immutable.SetLiteral(
 	APIResponseKeyURL,
 	APIResponseKeyMethod,
 	APIResponseKeyExpires,
+	APIResponseMaxUploadSizeBytes,
 )
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (resp *APIResponse) UnmarshalJSON(data []byte) error {
-	var m map[string]string
-	if err := json.Unmarshal(data, &m); err != nil {
+	var m map[string]any
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&m); err != nil {
 		return err
 	}
 
-	resp.Path = m[APIResponseKeyPath]
-	resp.URL = m[APIResponseKeyURL]
-	resp.Method = m[APIResponseKeyMethod]
+	resp.Path, _ = m[APIResponseKeyPath].(string)
+	resp.URL, _ = m[APIResponseKeyURL].(string)
+	resp.Method, _ = m[APIResponseKeyMethod].(string)
 
 	var expires time.Time
-	resp.RawExpires = m[APIResponseKeyExpires]
+	resp.RawExpires, _ = m[APIResponseKeyExpires].(string)
 	if err := expires.UnmarshalJSON([]byte(`"` + resp.RawExpires + `"`)); err == nil {
 		resp.Expires = expires
 	}
@@ -104,7 +119,15 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 		if responseNonHeaderKeys.Contains(k) {
 			continue
 		}
-		resp.Headers[k] = v
+		if s, ok := v.(string); ok {
+			resp.Headers[k] = s
+		}
+	}
+
+	if n, ok := m[APIResponseMaxUploadSizeBytes].(json.Number); ok {
+		if i, err := n.Int64(); err == nil && i > 0 {
+			resp.Headers["x-goog-content-length-range"] = fmt.Sprintf("0,%d", i)
+		}
 	}
 
 	return nil
@@ -125,7 +148,7 @@ func (resp APIResponse) ToRequest(ctx context.Context, body io.Reader) (*http.Re
 		return nil, err
 	}
 	for k, v := range resp.Headers {
-		req.Header.Set(k, v)
+		req.Header[k] = []string{v}
 	}
 	return req, nil
 }
@@ -137,11 +160,13 @@ func (c *Client) Download15(ctx context.Context, path string) (*http.Response, e
 		Method: http.MethodGet,
 		Path:   path,
 	}
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(payload); err != nil {
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+	if err := json.NewEncoder(buf).Encode(payload); err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to json encode api request: %w", err)
 	}
-	req, err := http.NewRequest(http.MethodPost, APIDownload, &buf)
+	req, err := http.NewRequest(http.MethodPost, APIDownload, buf)
 	if err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to create api request: %w", err)
 	}
@@ -275,15 +300,17 @@ func (c *Client) Upload15(ctx context.Context, content io.Reader) (path string, 
 		Method: http.MethodPut,
 		Path:   path,
 	}
-	return path, size, c.upload15(ctx, payload, buf, "")
+	return path, size, c.upload15(ctx, payload, buf, nil)
 }
 
-func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content io.Reader, generation string) error {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(apiPayload); err != nil {
+func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content io.Reader, extraHeaders map[string]string) error {
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+	if err := json.NewEncoder(buf).Encode(apiPayload); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to json encode api request: %w", err)
 	}
-	req, err := http.NewRequest(http.MethodPost, APIUpload, &buf)
+	req, err := http.NewRequest(http.MethodPost, APIUpload, buf)
 	if err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to create api request: %w", err)
 	}
@@ -298,6 +325,9 @@ func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content i
 	}
 	if err := payload.Err(); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: %w", err)
+	}
+	for k, v := range extraHeaders {
+		payload.Headers[k] = v
 	}
 	req, err = payload.ToRequest(ctx, content)
 	if err != nil {
@@ -339,26 +369,47 @@ func GenerateIndex(entries []IndexEntry) *bytes.Buffer {
 
 // UpdateRoot updates the root file with the given path to the previously
 // uploaded new root index.
-func (c *Client) UpdateRoot(ctx context.Context, generation string, path string) error {
-	payload := APIRequest{
-		Generation: generation,
+func (c *Client) UpdateRoot(ctx context.Context, generation string, root string) error {
+	gen, err := strconv.ParseInt(generation, 10, 64)
+	if err != nil {
+		return fmt.Errorf("rmapi.Client.syncComplete: failed to parse generation %q: %w", generation, err)
+	}
+
+	payload := UpdateRootRequest{
 		Method:     http.MethodPut,
 		Path:       "root",
+		Generation: gen,
+		Root:       root,
 	}
-	if err := c.upload15(ctx, payload, strings.NewReader(path), generation); err != nil {
+	if err := c.upload15(ctx, payload, strings.NewReader(root), map[string]string{
+		"x-goog-if-generation-match": generation,
+	}); err != nil {
 		return fmt.Errorf("rmapi.Client.UpdateRoot: failed to update root file: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, APISyncComplete, nil)
+	return c.syncComplete(ctx, gen)
+}
+
+func (c *Client) syncComplete(ctx context.Context, generation int64) error {
+	payload := SyncCompleteRequest{
+		Generation: generation,
+	}
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufPool.Put(buf)
+	if err := json.NewEncoder(buf).Encode(payload); err != nil {
+		return fmt.Errorf("rmapi.Client.syncComplete: failed to json encode request payload: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, APISyncComplete, buf)
 	if err != nil {
-		return fmt.Errorf("rmapi.Client.UpdateRoot: failed to create http request for sync-complete: %w", err)
+		return fmt.Errorf("rmapi.Client.syncComplete: failed to create http request: %w", err)
 	}
 	resp, err := c.Do(ctx, req)
 	if err != nil {
-		return fmt.Errorf("rmapi.Client.UpdateRoot: failed to execute http request for sync-complete: %w", err)
+		return fmt.Errorf("rmapi.Client.syncComplete: failed to execute http request: %w", err)
 	}
 	defer url2epub.DrainAndClose(resp.Body)
+	body := readUpTo(resp.Body, 1024)
 	if resp.StatusCode != http.StatusOK {
-		body := readUpTo(resp.Body, 1024)
 		if resp.StatusCode != http.StatusInternalServerError || !strings.Contains(body, "code = PermissionDenied") {
 			// Recently we start to get 500 error with body of:
 			//   "{\"error\":\"publish message: rpc error: code = PermissionDenied desc = User not authorized to perform this action.\"}\n"
@@ -367,6 +418,7 @@ func (c *Client) UpdateRoot(ctx context.Context, generation string, path string)
 			// handle it.
 			return fmt.Errorf("rmapi.Client.UpdateRoot: http status for sync-complete: %d/%s, %q", resp.StatusCode, resp.Status, body)
 		}
+		return fmt.Errorf("rmapi.Client.syncComplete: http status for sync-complete: %d/%s, %q", resp.StatusCode, resp.Status, body)
 	}
 	return nil
 }
