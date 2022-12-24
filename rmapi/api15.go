@@ -409,10 +409,17 @@ func (c *Client) syncComplete(ctx context.Context, generation int64) error {
 	}
 	defer url2epub.DrainAndClose(resp.Body)
 	body := readUpTo(resp.Body, 1024)
-	if resp.StatusCode != http.StatusOK {
+	switch resp.StatusCode {
+	default:
 		return fmt.Errorf("rmapi.Client.syncComplete: http status for sync-complete: %d/%s, %q", resp.StatusCode, resp.Status, body)
+
+	case http.StatusOK:
+		return nil
+
+	case http.StatusConflict:
+		// This is mostly harmless, just ignore it.
+		return nil
 	}
-	return nil
 }
 
 func readUpTo(r io.Reader, limit int64) string {
