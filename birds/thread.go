@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -132,7 +131,7 @@ func (s *Session) singleQuery(ctx context.Context, orig *tweet, nextToken string
 		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 	}()
 	var result queryResult
@@ -301,7 +300,7 @@ func (s *Session) singleTweet(ctx context.Context, id string) (*tweet, error) {
 		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 	}()
 	if resp.StatusCode != http.StatusOK {

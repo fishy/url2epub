@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -103,7 +102,7 @@ func GetHTML(ctx context.Context, args GetHTMLArgs) (*Node, *url.URL, error) {
 
 // DrainAndClose drains and closes r.
 func DrainAndClose(r io.ReadCloser) error {
-	io.Copy(ioutil.Discard, r)
+	io.Copy(io.Discard, r)
 	return r.Close()
 }
 

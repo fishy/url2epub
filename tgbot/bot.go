@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -78,7 +78,7 @@ func (b *Bot) PostRequest(
 	}
 	code = resp.StatusCode
 	if resp.StatusCode != http.StatusOK {
-		buf, _ := ioutil.ReadAll(resp.Body)
+		buf, _ := io.ReadAll(resp.Body)
 		err = fmt.Errorf(
 			"%s failed: code = %d, body = %q",
 			endpoint,
