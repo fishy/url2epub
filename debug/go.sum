@@ -4,7 +4,5 @@ go.yhsif.com/flagutils v0.2.0 h1:MVPdEZOTctSDd8fQ6CCeLlYTCneMY6pbGl1MWF9aJPc=
 go.yhsif.com/flagutils v0.2.0/go.mod h1:8ESSA1knO8Cqf5ugbFCZVFwg4qA6/rqwosc+M1aFWRk=
 go.yhsif.com/immutable v0.2.0 h1:ryjhH9U9OFzYZrps+FN2H/02RF6LchR9l65IzE4inJ0=
 go.yhsif.com/immutable v0.2.0/go.mod h1:F9gWg394KjDL3EpuyCWf6Uz6QBwI1YqypnTRDqIq3kU=
-go.yhsif.com/url2epub v0.4.0 h1:Y3n+/aKGfYNZQqb6HGPdPsJOapuuG19IOBauw41EYPg=
-go.yhsif.com/url2epub v0.4.0/go.mod h1:w+/aLFGPIpKeqqDPorPy1HQdeyUz+Tb8IZT+WS205uc=
 golang.org/x/net v0.0.0-20220812174116-3211cb980234 h1:RDqmgfe7SvlMWoqC3xwQ2blLO3fcWcxMa3eBLRdRW7E=
 golang.org/x/net v0.0.0-20220812174116-3211cb980234/go.mod h1:YDH+HFinaLZZlnHAfSS6ZXJJ9M9t4Dl22yv3iI2vPwk=

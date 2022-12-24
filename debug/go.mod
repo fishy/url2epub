@@ -12,3 +12,5 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	go.yhsif.com/immutable v0.2.0 // indirect
 )
+
+replace go.yhsif.com/url2epub => ../
