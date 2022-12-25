@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"sort"
 	"strings"
 	"time"
@@ -45,35 +46,37 @@ You can now go to https://my.remarkable.com/device/desktop to revoke access.`
 	failedEpubMsg     = `🚫 Failed to generate epub from URL: "%s"`
 	failedUpload      = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
 	successUpload     = `✅ Uploaded "%s.epub" (%s) to your reMarkable account from URL: "%s"`
+	epubMsg           = "ℹ️ Download your epub file here: %s"
 )
 
-func urlHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, message *tgbot.Message, text string) {
+func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
+	for _, entity := range message.Entities {
+		switch entity.Type {
+		case "url":
+			runes := []rune(message.Text)
+			if int64(len(runes)) < entity.Offset+entity.Length {
+				l(ctx).Errorw(
+					"Unable to process url entity",
+					"entity", entity,
+					"text", message.Text,
+				)
+				continue
+			}
+			return string(runes[entity.Offset : entity.Offset+entity.Length])
+		case "text_link":
+			return entity.URL
+		}
+	}
+	return ""
+}
+
+func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
 	chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
 	}
-	var url string
-breakFor:
-	for _, entity := range message.Entities {
-		switch entity.Type {
-		case "url":
-			runes := []rune(text)
-			if int64(len(runes)) < entity.Offset+entity.Length {
-				l(ctx).Errorw(
-					"Unable to process url entity",
-					"entity", entity,
-					"text", text,
-				)
-				continue
-			}
-			url = string(runes[entity.Offset : entity.Offset+entity.Length])
-			break breakFor
-		case "text_link":
-			url = entity.URL
-			break breakFor
-		}
-	}
+	url := firstURLInMessage(ctx, message)
 	if url == "" {
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
@@ -135,6 +138,31 @@ breakFor:
 		"epub size", size,
 		"id", id,
 		"title", title,
+	)
+}
+
+func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
+	url := firstURLInMessage(ctx, message)
+	if url == "" && message.ReplyTo != nil {
+		url = firstURLInMessage(ctx, message.ReplyTo)
+	}
+	if url == "" {
+		replyMessage(ctx, w, message, noURLmsg, true, nil)
+		return
+	}
+	var sb strings.Builder
+	sb.WriteString(globalURLPrefix)
+	sb.WriteString(epubEndpoint)
+	sb.WriteString("?")
+	params := make(neturl.Values)
+	params.Set(queryURL, url)
+	sb.WriteString(params.Encode())
+	restURL := fmt.Sprintf(epubMsg, sb.String())
+	replyMessage(ctx, w, message, restURL, true, nil)
+	l(ctx).Info(
+		"epubHandler: Generated rest url",
+		"orig url", url,
+		"rest url", restURL,
 	)
 }
 

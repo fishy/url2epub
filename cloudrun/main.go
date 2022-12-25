@@ -25,6 +25,7 @@ const (
 
 	globalURLPrefix = `https://url2epub.fishy.me`
 	webhookPrefix   = `/w/`
+	epubEndpoint    = `/epub`
 
 	rmDescription = `desktop-windows`
 
@@ -32,6 +33,7 @@ const (
 	stopCommand  = `/stop`
 	dirCommand   = `/dir`
 	fontCommand  = `/font`
+	epubCommand  = `/epub`
 
 	unknownCallback = `🚫 Unknown callback`
 
@@ -68,7 +70,7 @@ func main() {
 
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc(webhookPrefix, webhookHandler)
-	http.HandleFunc("/epub", restEpubHandler)
+	http.HandleFunc(epubEndpoint, restEpubHandler)
 	http.HandleFunc("/_ah/health", healthCheckHandler)
 
 	port := os.Getenv("PORT")
@@ -151,9 +153,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	text := update.Message.Text
 	switch {
 	default:
-		urlHandler(ctx, w, r, update.Message, text)
+		urlHandler(ctx, w, update.Message)
 	case strings.HasPrefix(text, startCommand):
 		startHandler(ctx, w, update.Message, text)
+	case strings.HasPrefix(text, epubCommand):
+		epubHandler(ctx, w, update.Message)
 	case text == stopCommand:
 		stopHandler(ctx, w, update.Message)
 	case text == dirCommand:

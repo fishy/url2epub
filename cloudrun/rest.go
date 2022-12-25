@@ -12,12 +12,18 @@ import (
 	"go.yhsif.com/url2epub"
 )
 
+const (
+	queryURL                  = "url"
+	queryGray                 = "gray"
+	queryPassthroughUserAgent = "passthrough-user-agent"
+)
+
 func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := logContext(r)
 
-	url := r.FormValue("url")
-	gray, _ := strconv.ParseBool(r.FormValue("gray"))
-	passthroughUA, _ := strconv.ParseBool(r.FormValue("passthrough-user-agent"))
+	url := r.FormValue(queryURL)
+	gray, _ := strconv.ParseBool(r.FormValue(queryGray))
+	passthroughUA, _ := strconv.ParseBool(r.FormValue(queryPassthroughUserAgent))
 	userAgent := defaultUserAgent
 	if passthroughUA {
 		userAgent = r.Header.Get("user-agent")

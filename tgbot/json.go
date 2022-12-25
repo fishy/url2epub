@@ -29,6 +29,8 @@ type Message struct {
 	Text string `json:"text,omitempty"`
 
 	Entities []MessageEntity `json:"entities,omitempty"`
+
+	ReplyTo *Message `json:"reply_to_message,omitempty"`
 }
 
 // User is a telegram user.
