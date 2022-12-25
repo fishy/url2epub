@@ -1,7 +1,6 @@
 package tgbot
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha512"
 	"encoding/base64"
@@ -104,12 +103,12 @@ func (b *Bot) SendMessage(
 		values.Add("reply_to", strconv.FormatInt(*replyTo, 10))
 	}
 	if markup != nil {
-		buf := new(bytes.Buffer)
-		err = json.NewEncoder(buf).Encode(*markup)
+		var sb strings.Builder
+		err = json.NewEncoder(&sb).Encode(*markup)
 		if err != nil {
 			return
 		}
-		values.Add("reply_markup", buf.String())
+		values.Add("reply_markup", sb.String())
 	}
 	return b.PostRequest(ctx, "sendMessage", values)
 }

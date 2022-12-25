@@ -1,7 +1,7 @@
 package rmapi
 
 import (
-	"bytes"
+	"strings"
 	"text/template"
 )
 
@@ -78,9 +78,9 @@ func (ft FileType) InitialContent(args ContentArgs) (string, error) {
 	if tmpl == nil {
 		return "", nil
 	}
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, args); err != nil {
+	var sb strings.Builder
+	if err := tmpl.Execute(&sb, args); err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return sb.String(), nil
 }

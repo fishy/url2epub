@@ -44,11 +44,11 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 		Version:      1,
 		LastModified: TimestampMillisecond(now),
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(meta); err != nil {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(meta); err != nil {
 		return fmt.Errorf("rmapi.Client.Upload: failed to json encode for %s: %w", metaName, err)
 	}
-	metaPath, metaSize, err := c.Upload15(ctx, buf)
+	metaPath, metaSize, err := c.Upload15(ctx, &buf)
 	if err != nil {
 		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", metaName, err)
 	}
