@@ -60,6 +60,7 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 	atom.Del:        immutable.EmptySet[string](),
 	atom.Details:    immutable.EmptySet[string](),
 	atom.Dd:         immutable.EmptySet[string](),
+	atom.Dfn:        immutable.EmptySet[string](),
 	atom.Div:        immutable.EmptySet[string](),
 	atom.Dl:         immutable.EmptySet[string](),
 	atom.Dt:         immutable.EmptySet[string](),
