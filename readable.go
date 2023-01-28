@@ -7,6 +7,9 @@ import (
 	"io"
 	"net/url"
 	"path"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,9 +23,14 @@ import (
 )
 
 const (
-	imgSrc = "src"
-	jpgExt = ".jpg"
+	imgSrc    = "src"
+	imgSrcset = "srcset"
+	jpgExt    = ".jpg"
 )
+
+var emptyStringSet = immutable.EmptySet[string]()
+
+var imgAtoms = immutable.SetLiteral(atom.Img, atom.Source)
 
 // A map of:
 // key: atoms we want to keep in the readable html.
@@ -42,69 +50,76 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 	),
 	atom.Img: immutable.SetLiteral(
 		imgSrc,
+		imgSrcset,
 		"alt",
 		"width",
 		"height",
 	),
+	atom.Source: immutable.SetLiteral(
+		imgSrc,
+		imgSrcset,
+		"width",
+		"height",
+	),
 
-	atom.Article:    immutable.EmptySet[string](),
-	atom.B:          immutable.EmptySet[string](),
-	atom.Big:        immutable.EmptySet[string](),
-	atom.Blockquote: immutable.EmptySet[string](),
-	atom.Body:       immutable.EmptySet[string](),
-	atom.Br:         immutable.EmptySet[string](),
-	atom.Center:     immutable.EmptySet[string](),
-	atom.Cite:       immutable.EmptySet[string](),
-	atom.Code:       immutable.EmptySet[string](),
-	atom.Content:    immutable.EmptySet[string](),
-	atom.Del:        immutable.EmptySet[string](),
-	atom.Details:    immutable.EmptySet[string](),
-	atom.Dd:         immutable.EmptySet[string](),
-	atom.Dfn:        immutable.EmptySet[string](),
-	atom.Div:        immutable.EmptySet[string](),
-	atom.Dl:         immutable.EmptySet[string](),
-	atom.Dt:         immutable.EmptySet[string](),
-	atom.Em:         immutable.EmptySet[string](),
-	atom.Figure:     immutable.EmptySet[string](),
-	atom.Figcaption: immutable.EmptySet[string](),
-	atom.Footer:     immutable.EmptySet[string](),
-	atom.H1:         immutable.EmptySet[string](),
-	atom.H2:         immutable.EmptySet[string](),
-	atom.H3:         immutable.EmptySet[string](),
-	atom.H4:         immutable.EmptySet[string](),
-	atom.H5:         immutable.EmptySet[string](),
-	atom.H6:         immutable.EmptySet[string](),
-	atom.Head:       immutable.EmptySet[string](),
-	atom.Header:     immutable.EmptySet[string](),
-	atom.I:          immutable.EmptySet[string](),
-	atom.Li:         immutable.EmptySet[string](),
-	atom.Main:       immutable.EmptySet[string](),
-	atom.Mark:       immutable.EmptySet[string](),
-	atom.Ol:         immutable.EmptySet[string](),
-	atom.P:          immutable.EmptySet[string](),
-	atom.Picture:    immutable.EmptySet[string](),
-	atom.Pre:        immutable.EmptySet[string](),
-	atom.Q:          immutable.EmptySet[string](),
-	atom.S:          immutable.EmptySet[string](),
-	atom.Section:    immutable.EmptySet[string](),
-	atom.Small:      immutable.EmptySet[string](),
-	atom.Span:       immutable.EmptySet[string](),
-	atom.Strike:     immutable.EmptySet[string](),
-	atom.Strong:     immutable.EmptySet[string](),
-	atom.Sub:        immutable.EmptySet[string](),
-	atom.Summary:    immutable.EmptySet[string](),
-	atom.Sup:        immutable.EmptySet[string](),
-	atom.Table:      immutable.EmptySet[string](),
-	atom.Tbody:      immutable.EmptySet[string](),
-	atom.Tfoot:      immutable.EmptySet[string](),
-	atom.Td:         immutable.EmptySet[string](),
-	atom.Th:         immutable.EmptySet[string](),
-	atom.Thead:      immutable.EmptySet[string](),
-	atom.Tr:         immutable.EmptySet[string](),
-	atom.Time:       immutable.EmptySet[string](),
-	atom.Title:      immutable.EmptySet[string](),
-	atom.U:          immutable.EmptySet[string](),
-	atom.Ul:         immutable.EmptySet[string](),
+	atom.Article:    emptyStringSet,
+	atom.B:          emptyStringSet,
+	atom.Big:        emptyStringSet,
+	atom.Blockquote: emptyStringSet,
+	atom.Body:       emptyStringSet,
+	atom.Br:         emptyStringSet,
+	atom.Center:     emptyStringSet,
+	atom.Cite:       emptyStringSet,
+	atom.Code:       emptyStringSet,
+	atom.Content:    emptyStringSet,
+	atom.Del:        emptyStringSet,
+	atom.Details:    emptyStringSet,
+	atom.Dd:         emptyStringSet,
+	atom.Dfn:        emptyStringSet,
+	atom.Div:        emptyStringSet,
+	atom.Dl:         emptyStringSet,
+	atom.Dt:         emptyStringSet,
+	atom.Em:         emptyStringSet,
+	atom.Figure:     emptyStringSet,
+	atom.Figcaption: emptyStringSet,
+	atom.Footer:     emptyStringSet,
+	atom.H1:         emptyStringSet,
+	atom.H2:         emptyStringSet,
+	atom.H3:         emptyStringSet,
+	atom.H4:         emptyStringSet,
+	atom.H5:         emptyStringSet,
+	atom.H6:         emptyStringSet,
+	atom.Head:       emptyStringSet,
+	atom.Header:     emptyStringSet,
+	atom.I:          emptyStringSet,
+	atom.Li:         emptyStringSet,
+	atom.Main:       emptyStringSet,
+	atom.Mark:       emptyStringSet,
+	atom.Ol:         emptyStringSet,
+	atom.P:          emptyStringSet,
+	atom.Picture:    emptyStringSet,
+	atom.Pre:        emptyStringSet,
+	atom.Q:          emptyStringSet,
+	atom.S:          emptyStringSet,
+	atom.Section:    emptyStringSet,
+	atom.Small:      emptyStringSet,
+	atom.Span:       emptyStringSet,
+	atom.Strike:     emptyStringSet,
+	atom.Strong:     emptyStringSet,
+	atom.Sub:        emptyStringSet,
+	atom.Summary:    emptyStringSet,
+	atom.Sup:        emptyStringSet,
+	atom.Table:      emptyStringSet,
+	atom.Tbody:      emptyStringSet,
+	atom.Tfoot:      emptyStringSet,
+	atom.Td:         emptyStringSet,
+	atom.Th:         emptyStringSet,
+	atom.Thead:      emptyStringSet,
+	atom.Tr:         emptyStringSet,
+	atom.Time:       emptyStringSet,
+	atom.Title:      emptyStringSet,
+	atom.U:          emptyStringSet,
+	atom.Ul:         emptyStringSet,
 }
 
 var imgSrcAlternatives = immutable.SetLiteral(
@@ -284,20 +299,70 @@ var allowedSrcSchemes = immutable.SetLiteral(
 	"http",
 )
 
+func tryParseImgURL(s string) *url.URL {
+	u, err := url.Parse(s)
+	if err == nil && allowedSrcSchemes.Contains(u.Scheme) {
+		return u
+	}
+	return nil
+}
+
+type srcsetItem struct {
+	url   *url.URL
+	width int64
+}
+
+// Examples:
+// * "url 640w"
+// * " url 640w"
+// * "url"
+var srcsetRE = regexp.MustCompile(`^\s*(.+?)(?: (\d+)w)?\s*$`)
+
+func tryParseImgSrcset(s string) *url.URL {
+	urls := strings.Split(s, ",")
+	items := make([]srcsetItem, 0, len(urls))
+	for _, item := range urls {
+		groups := srcsetRE.FindStringSubmatch(item)
+		if len(groups) == 0 {
+			continue
+		}
+		u := tryParseImgURL(groups[1])
+		if u == nil {
+			continue
+		}
+		// Should not fail based on the regexp
+		width, _ := strconv.ParseInt(groups[2], 10, 64)
+		items = append(items, srcsetItem{
+			url:   u,
+			width: width,
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].width > items[j].width
+	})
+	return items[0].url
+}
+
 func findSrcURLFromIMGNode(
 	node *html.Node,
 	srcIndices []int,
+	srcsetIndex int,
 ) *url.URL {
 	for _, i := range srcIndices {
 		if i < 0 {
 			continue
 		}
-		u, err := url.Parse(node.Attr[i].Val)
-		if err == nil && allowedSrcSchemes.Contains(u.Scheme) {
+		if u := tryParseImgURL(node.Attr[i].Val); u != nil {
 			return u
 		}
 	}
-	return nil
+	if srcsetIndex < 0 {
+		return nil
+	}
+	return tryParseImgSrcset(node.Attr[srcsetIndex].Val)
 }
 
 func (n *Node) readableRecursive(
@@ -352,6 +417,7 @@ func (n *Node) readableRecursive(
 			return nil, nil
 		}
 		srcIndex := -1
+		srcsetIndex := -1
 		var altSrcIndices []int
 		for _, attr := range node.Attr {
 			i := len(newNode.Attr)
@@ -361,19 +427,30 @@ func (n *Node) readableRecursive(
 				continue
 			}
 			newNode.Attr = append(newNode.Attr, attr)
-			if attr.Key == imgSrc {
+			switch attr.Key {
+			case imgSrc:
 				srcIndex = i
+			case imgSrcset:
+				srcsetIndex = i
 			}
 		}
-		if newNode.DataAtom == atom.Img {
+		if imgAtoms.Contains(newNode.DataAtom) {
 			// Special handling for images.
-			srcURL := findSrcURLFromIMGNode(newNode, append([]int{srcIndex}, altSrcIndices...))
+			newNode.DataAtom = atom.Img
+			newNode.Data = atom.Img.String()
+			srcURL := findSrcURLFromIMGNode(newNode, append([]int{srcIndex}, altSrcIndices...), srcsetIndex)
 			if srcURL == nil {
 				// No usable src, skip this image
 				return nil, nil
 			}
 			srcURL = baseURL.ResolveReference(srcURL)
 			src := srcURL.String()
+			if srcIndex < 0 {
+				srcIndex = len(newNode.Attr)
+				newNode.Attr = append(newNode.Attr, html.Attribute{
+					Key: imgSrc,
+				})
+			}
 			if filename, exists := imgMapping[src]; exists {
 				// This image url already appeared before, reuse the same local file.
 				newNode.Attr[srcIndex].Val = filename
