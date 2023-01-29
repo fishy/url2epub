@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"path"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,6 +59,7 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 		imgSrcset,
 		"width",
 		"height",
+		"type",
 	),
 
 	atom.Article:    emptyStringSet,
@@ -307,11 +307,6 @@ func tryParseImgURL(s string) *url.URL {
 	return nil
 }
 
-type srcsetItem struct {
-	url   *url.URL
-	width int64
-}
-
 // Examples:
 // * "url 640w"
 // * " url 640w"
@@ -320,30 +315,25 @@ var srcsetRE = regexp.MustCompile(`^\s*(.+?)(?: (\d+)w)?\s*$`)
 
 func tryParseImgSrcset(s string) *url.URL {
 	urls := strings.Split(s, ",")
-	items := make([]srcsetItem, 0, len(urls))
+	var maxWidth int64 = -1
+	var maxURL *url.URL
 	for _, item := range urls {
 		groups := srcsetRE.FindStringSubmatch(item)
 		if len(groups) == 0 {
 			continue
 		}
-		u := tryParseImgURL(groups[1])
-		if u == nil {
-			continue
-		}
 		// Should not fail based on the regexp
 		width, _ := strconv.ParseInt(groups[2], 10, 64)
-		items = append(items, srcsetItem{
-			url:   u,
-			width: width,
-		})
+		if width > maxWidth {
+			u := tryParseImgURL(groups[1])
+			if u == nil {
+				continue
+			}
+			maxWidth = width
+			maxURL = u
+		}
 	}
-	if len(items) == 0 {
-		return nil
-	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].width > items[j].width
-	})
-	return items[0].url
+	return maxURL
 }
 
 func findSrcURLFromIMGNode(
@@ -471,6 +461,13 @@ func (n *Node) readableRecursive(
 					defer wg.Done()
 					downloadImage(ctx, srcURL, userAgent, reader, gray, logger)
 				}()
+			}
+			// Remove srcset if they are there
+			if srcsetIndex >= 0 {
+				newNode.Attr = append(
+					newNode.Attr[:srcsetIndex],
+					newNode.Attr[srcsetIndex+1:]...,
+				)
 			}
 			// Skip adding childrens to img tags.
 			// When img tags have childrens, the render will fail with:
