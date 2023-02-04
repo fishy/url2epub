@@ -1,6 +1,6 @@
 module go.yhsif.com/url2epub/debug
 
-go 1.19
+go 1.20
 
 require (
 	go.yhsif.com/flagutils v0.2.0
