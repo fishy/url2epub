@@ -9,7 +9,7 @@ require (
 
 require (
 	go.yhsif.com/immutable v0.2.0 // indirect
-	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
+	golang.org/x/net v0.8.0 // indirect
 )
 
 replace go.yhsif.com/url2epub => ../../

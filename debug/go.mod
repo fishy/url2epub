@@ -5,8 +5,8 @@ go 1.20
 require (
 	go.yhsif.com/flagutils v0.2.0
 	go.yhsif.com/url2epub v0.4.0
-	golang.org/x/image v0.3.0
-	golang.org/x/net v0.0.0-20220812174116-3211cb980234
+	golang.org/x/image v0.6.0
+	golang.org/x/net v0.8.0
 )
 
 require (
