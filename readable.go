@@ -124,6 +124,7 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 
 var imgSrcAlternatives = immutable.SetLiteral(
 	"nitro-lazy-src",
+	"data-src",
 )
 
 // The atoms that we need to keep even if they have no attributes and no
