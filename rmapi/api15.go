@@ -19,6 +19,7 @@ import (
 	"go.yhsif.com/immutable"
 
 	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/logger"
 )
 
 // Constants used in reMarkable 1.5 API.
@@ -248,7 +249,7 @@ func (c *Client) DownloadIndex(ctx context.Context, path string) ([]IndexEntry, 
 		}
 		entry, err := ParseIndexEntry(text)
 		if err != nil {
-			c.Logger.Log(fmt.Sprintf("Failed to parse index line: %v", err))
+			logger.For(ctx).Error("Failed to parse index line", "err", err)
 			continue
 		}
 		entries = append(entries, entry)

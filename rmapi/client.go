@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 )
 
 const (
@@ -73,8 +72,6 @@ func Register(ctx context.Context, args RegisterArgs) (*Client, error) {
 // directly from refresh token stored previously.
 type Client struct {
 	RefreshToken string
-
-	Logger logger.Logger
 
 	token string
 }

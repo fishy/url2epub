@@ -1,40 +1,23 @@
-// Package logger provides a simple log interface that you can wrap whatever
-// logging library you use into.
+// Package logger provides wrappers around slog.
 package logger // import "go.yhsif.com/url2epub/logger"
 
 import (
-	"log"
-	"os"
+	"context"
+
+	"golang.org/x/exp/slog"
 )
 
-// Logger is a simple common ground to wrap whatever logging library the user
-// prefers into.
-type Logger func(msg string)
+type logKeyType struct{}
 
-// Log is the nil-safe way of using a Logger.
-//
-// If l is nil it does nothing. Otherwise it calls l.
-func (l Logger) Log(msg string) {
-	if l != nil {
-		l(msg)
+var logKey logKeyType
+
+func For(ctx context.Context) *slog.Logger {
+	if l, ok := ctx.Value(logKey).(*slog.Logger); ok {
+		return l
 	}
+	return slog.Default()
 }
 
-// NopLogger is a Logger implementation that does nothing.
-func NopLogger(_ string) {}
-
-var stdFallback = log.New(os.Stderr, "", log.LstdFlags)
-
-// StdLogger is a Logger implementation that wraps stdlib log package.
-//
-// If passed in logger is nil, it falls back to
-//
-//     log.New(os.Stderr, "", log.LstdFlags)
-func StdLogger(logger *log.Logger) Logger {
-	if logger == nil {
-		logger = stdFallback
-	}
-	return func(msg string) {
-		logger.Print(msg)
-	}
+func SetContext(ctx context.Context, l *slog.Logger) context.Context {
+	return context.WithValue(ctx, logKey, l)
 }

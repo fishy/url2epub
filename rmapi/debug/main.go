@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/rmapi"
 )
 
@@ -71,11 +70,9 @@ func main() {
 			log.Fatalf("Failed to register client: %v", err)
 		}
 		log.Printf("Your refresh token is: %q", client.RefreshToken)
-		client.Logger = logger.StdLogger(nil)
 	} else {
 		client = &rmapi.Client{
 			RefreshToken: *refreshToken,
-			Logger:       logger.StdLogger(nil),
 		}
 	}
 

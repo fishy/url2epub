@@ -30,8 +30,6 @@ type Bot struct {
 	GlobalURLPrefix string
 	WebhookPrefix   string
 
-	Logger logger.Logger
-
 	hashOnce   sync.Once
 	hashPrefix string
 }
@@ -52,7 +50,11 @@ func (b *Bot) PostRequest(
 ) (code int, err error) {
 	start := time.Now()
 	defer func() {
-		b.Logger.Log(fmt.Sprintf("HTTP POST for %s took %v", endpoint, time.Since(start)))
+		logger.For(ctx).Debug(
+			"tgbot.Bot.PostRequest: HTTP POST",
+			"endpoint", endpoint,
+			"took", time.Since(start),
+		)
 	}()
 
 	var req *http.Request
@@ -127,7 +129,7 @@ func (b *Bot) initHashPrefix(ctx context.Context) {
 	b.hashOnce.Do(func() {
 		hash := sha512.Sum512_224([]byte(b.String()))
 		b.hashPrefix = b.WebhookPrefix + base64.URLEncoding.EncodeToString(hash[:])
-		b.Logger.Log(fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
+		logger.For(ctx).Debug(fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
 	})
 }
 

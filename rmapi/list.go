@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/logger"
 )
 
 // RootDisplayName is the display name to be used by the root directory.
@@ -33,12 +34,12 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 		}
 		indexEntries, err := c.DownloadIndex(ctx, entry.Path)
 		if err != nil {
-			c.Logger.Log(fmt.Sprintf(
-				"rmapi.ListDirs: failed to download index file for path %q and uuid %q: %v",
-				entry.Path,
-				entry.Filename,
-				err,
-			))
+			logger.For(ctx).Error(
+				"rmapi.ListDirs: failed to download index file",
+				"err", err,
+				"path", entry.Path,
+				"uuid", entry.Filename,
+			)
 			continue
 		}
 		var metadataFound bool
@@ -48,12 +49,12 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			}
 			resp, err := c.Download15(ctx, index.Path)
 			if err != nil {
-				c.Logger.Log(fmt.Sprintf(
-					"rmapi.ListDirs: failed to download %s file for index %+v: %v",
-					MetadataSuffix,
-					index,
-					err,
-				))
+				logger.For(ctx).Error(
+					"rmapi.ListDirs: failed to download file for index",
+					"err", err,
+					"suffix", MetadataSuffix,
+					"index", fmt.Sprintf("%+v", index),
+				)
 				continue
 			}
 			var meta Metadata
@@ -61,12 +62,12 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 				defer url2epub.DrainAndClose(resp.Body)
 				return json.NewDecoder(resp.Body).Decode(&meta)
 			}(); err != nil {
-				c.Logger.Log(fmt.Sprintf(
-					"rmapi.ListDirs: failed to parse %s file for index %+v: %v",
-					MetadataSuffix,
-					index,
-					err,
-				))
+				logger.For(ctx).Error(
+					"rmapi.ListDirs: failed to parse file for index",
+					"err", err,
+					"suffix", MetadataSuffix,
+					"index", fmt.Sprintf("%+v", index),
+				)
 				continue
 			}
 			metadataFound = true
@@ -76,12 +77,12 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			break
 		}
 		if !metadataFound {
-			c.Logger.Log(fmt.Sprintf(
-				"rmapi.ListDirs: no %s file found for %+v: %v",
-				MetadataSuffix,
-				entry,
-				err,
-			))
+			logger.For(ctx).Warn(
+				"rmapi.ListDirs: file not found for entry",
+				"lastErr", err,
+				"suffix", MetadataSuffix,
+				"entry", fmt.Sprintf("%+v", entry),
+			)
 		}
 	}
 	m := make(map[string]string)

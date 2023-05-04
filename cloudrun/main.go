@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"golang.org/x/exp/slog"
 
+	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/tgbot"
 )
 
@@ -52,18 +55,29 @@ var dsClient *datastore.Client
 func main() {
 	initLogger()
 
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		slog.Debug(
+			"Read build info",
+			"string", bi.String(),
+			"json", bi,
+		)
+	} else {
+		slog.Warn("Unable to read build info")
+	}
+
 	ctx := context.Background()
 	if err := initDatastoreClient(ctx); err != nil {
-		l(ctx).Fatalw(
+		logger.For(ctx).Error(
 			"Failed to get data store client",
 			"err", err,
 		)
+		os.Exit(1)
 	}
 	initBot(ctx)
 	initTwitter(ctx)
 
 	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("K_REVISION"))
-	l(ctx).Infow(
+	logger.For(ctx).Info(
 		"default user agent",
 		"user-agent", defaultUserAgent,
 	)
@@ -76,17 +90,17 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-		l(ctx).Warnw(
+		logger.For(ctx).Warn(
 			"Using default port",
 			"port", port,
 		)
 	}
-	l(ctx).Infow(
+	logger.For(ctx).Info(
 		"Started listening",
 		"port", port,
 	)
 
-	l(ctx).Errorw(
+	logger.For(ctx).Error(
 		"HTTP server returned",
 		"err", http.ListenAndServe(fmt.Sprintf(":%s", port), nil),
 	)
@@ -111,14 +125,14 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Body == nil {
-		l(ctx).Error("Empty webhook request body")
+		logger.For(ctx).Error("Empty webhook request body")
 		http.NotFound(w, r)
 		return
 	}
 
 	var update tgbot.Update
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"Unable to decode json",
 			"err", err,
 		)
@@ -130,7 +144,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		data := callback.Data
 		switch {
 		default:
-			l(ctx).Errorw(
+			logger.For(ctx).Error(
 				"Bad callback",
 				"data", data,
 				"callback", callback,
@@ -146,7 +160,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if update.Message == nil {
-		l(ctx).Warnw("Not a message nor callback, ignoring...", "update", update)
+		logger.For(ctx).Warn("Not a message nor callback, ignoring...", "update", update)
 		reply200(w)
 		return
 	}
@@ -184,15 +198,13 @@ func initBot(ctx context.Context) {
 		Token:           secret,
 		GlobalURLPrefix: globalURLPrefix,
 		WebhookPrefix:   webhookPrefix,
-		Logger: func(msg string) {
-			l(ctx).Info(msg)
-		},
 	})
 	if _, err := getBot().SetWebhook(ctx, webhookMaxConn); err != nil {
-		l(ctx).Fatalw(
+		logger.For(ctx).Error(
 			"Failed to set webhook",
 			"err", err,
 		)
+		os.Exit(1)
 	}
 }
 

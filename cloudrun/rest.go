@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"go.yhsif.com/url2epub"
+	"go.yhsif.com/url2epub/logger"
 )
 
 const (
@@ -30,7 +31,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, title, data, err := getEpub(r.Context(), url, userAgent, gray)
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"getEpub failed",
 			"err", err,
 		)
@@ -93,7 +94,7 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		}
 	}
 	if !root.IsAMP() {
-		l(ctx).Infow(
+		logger.For(ctx).Info(
 			"Generating epub from non-amp url",
 			"url", baseURL.String(),
 		)
@@ -102,9 +103,6 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		BaseURL:   baseURL,
 		ImagesDir: "images",
 		Grayscale: gray,
-		Logger: func(msg string) {
-			l(ctx).Error(msg)
-		},
 	})
 	if err != nil {
 		return "", "", nil, fmt.Errorf(

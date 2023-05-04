@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/tgbot"
 )
 
@@ -100,7 +101,7 @@ func fontHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 
 func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"Bad callback",
 			"data", data,
 			"callback", callback,
@@ -111,7 +112,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"Bad callback",
 			"data", data,
 			"chat", callback.Message.Chat.ID,
@@ -122,7 +123,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 	}
 	chat.Font = data
 	if err := chat.Save(ctx); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"Unable to save chat",
 			"err", err,
 		)
@@ -131,7 +132,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"Unable to reply to callback",
 			"err", err,
 		)

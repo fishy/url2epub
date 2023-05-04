@@ -12,6 +12,7 @@ require (
 require (
 	github.com/google/uuid v1.3.0 // indirect
 	go.yhsif.com/immutable v0.2.0 // indirect
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 )
 
 replace go.yhsif.com/url2epub => ../

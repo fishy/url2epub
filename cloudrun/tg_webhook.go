@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
 
@@ -55,7 +56,7 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 		case "url":
 			runes := []rune(message.Text)
 			if int64(len(runes)) < entity.Offset+entity.Length {
-				l(ctx).Errorw(
+				logger.For(ctx).Error(
 					"Unable to process url entity",
 					"entity", entity,
 					"text", message.Text,
@@ -83,10 +84,10 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"urlHandler: getEpub failed",
-			"url", url,
 			"err", err,
+			"url", url,
 		)
 		if errors.Is(err, errUnsupportedURL) {
 			replyMessage(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
@@ -97,14 +98,11 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	client := &rmapi.Client{
 		RefreshToken: chat.Token,
-		Logger: func(msg string) {
-			l(ctx).Info(msg)
-		},
 	}
 	start := time.Now()
 	size := data.Len()
 	defer func() {
-		l(ctx).Infow(
+		logger.For(ctx).Info(
 			"urlHandler: Uploaded",
 			"took", time.Since(start),
 			"epub size", size,
@@ -124,16 +122,16 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		},
 	})
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"urlHandler: Upload failed",
-			"url", url,
 			"err", err,
+			"url", url,
 		)
 		replyMessage(ctx, w, message, fmt.Sprintf(failedUpload, url), true, nil)
 		return
 	}
 	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
-	l(ctx).Infow(
+	logger.For(ctx).Info(
 		"urlHandler: Uploaded epub to reMarkable",
 		"epub size", size,
 		"id", id,
@@ -159,7 +157,7 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	sb.WriteString(params.Encode())
 	restURL := fmt.Sprintf(epubMsg, sb.String())
 	replyMessage(ctx, w, message, restURL, true, nil)
-	l(ctx).Info(
+	logger.For(ctx).Info(
 		"epubHandler: Generated rest url",
 		"orig url", url,
 		"rest url", restURL,
@@ -178,7 +176,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Description: rmDescription,
 	})
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"startHandler: Unable to register",
 			"err", err,
 		)
@@ -193,7 +191,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Token: client.RefreshToken,
 	}
 	if err := chat.Save(ctx); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"startHandler: Unable to save chat",
 			"err", err,
 		)
@@ -223,13 +221,10 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	client := &rmapi.Client{
 		RefreshToken: chat.Token,
-		Logger: func(msg string) {
-			l(ctx).Info(msg)
-		},
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirHandler: ListDirs failed",
 			"err", err,
 		)
@@ -262,7 +257,7 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 
 func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirCallbackHandler: Bad callback",
 			"data", data,
 			"callback", callback,
@@ -273,7 +268,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirCallbackHandler: Bad callback",
 			"data", data,
 			"chat", callback.Message.Chat.ID,
@@ -284,7 +279,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat.ParentID = data
 	if err := chat.Save(ctx); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirCallbackHandler: Unable to save chat",
 			"err", err,
 		)
@@ -293,7 +288,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirCallbackHandler: Unable to reply to callback",
 			"err", err,
 		)
@@ -302,13 +297,10 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 
 	client := &rmapi.Client{
 		RefreshToken: chat.Token,
-		Logger: func(msg string) {
-			l(ctx).Info(msg)
-		},
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		l(ctx).Errorw(
+		logger.For(ctx).Error(
 			"dirCallbackHandler: Unable to list dir",
 			"err", err,
 		)

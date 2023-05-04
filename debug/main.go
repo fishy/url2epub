@@ -13,7 +13,6 @@ import (
 	"golang.org/x/net/html"
 
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 
 	_ "golang.org/x/image/webp"
 	_ "image/gif"
@@ -112,7 +111,6 @@ func main() {
 			ImagesDir: "images",
 			UserAgent: *ua,
 			Grayscale: *grayscale,
-			Logger:    logger.StdLogger(nil),
 		})
 		if err != nil {
 			log.Fatal(err)
