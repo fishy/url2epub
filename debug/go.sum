@@ -1,6 +1,8 @@
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+go.yhsif.com/ctxslog v0.0.0-20230507072145-32072731fd3b h1:BeEyxHuE+emmF/nskoAEJYgEstiP07eDk0K0GEJzqHQ=
+go.yhsif.com/ctxslog v0.0.0-20230507072145-32072731fd3b/go.mod h1:GZQJAL7ZnD9J9fhGWkny4jLns72AvT7K3eJXT0WMBgw=
 go.yhsif.com/flagutils v0.2.0 h1:MVPdEZOTctSDd8fQ6CCeLlYTCneMY6pbGl1MWF9aJPc=
 go.yhsif.com/flagutils v0.2.0/go.mod h1:8ESSA1knO8Cqf5ugbFCZVFwg4qA6/rqwosc+M1aFWRk=
 go.yhsif.com/immutable v0.2.0 h1:ryjhH9U9OFzYZrps+FN2H/02RF6LchR9l65IzE4inJ0=

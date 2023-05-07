@@ -4,12 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
+	"go.yhsif.com/ctxslog"
 	"go.yhsif.com/flagutils"
+	"golang.org/x/exp/slog"
 	"golang.org/x/net/html"
 
 	"go.yhsif.com/url2epub"
@@ -73,6 +74,11 @@ func main() {
 	)
 	flag.Parse()
 
+	slog.SetDefault(slog.New(ctxslog.ContextHandler(slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	}.NewTextHandler(os.Stderr))))
+
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
@@ -81,13 +87,14 @@ func main() {
 		TwitterBearer: *bearer,
 	})
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("url2epub.GetHTML failed", "err", err)
+		os.Exit(1)
 	}
-	log.Printf(
-		`base url: "%v", amp: %v, amp url: "%s"`,
-		baseURL,
-		root.IsAMP(),
-		root.GetAMPurl(),
+	slog.Debug(
+		"GetHTML returned",
+		"baseURL", baseURL.String(),
+		"amp", root.IsAMP(),
+		"ampURL", root.GetAMPurl(),
 	)
 	if readableOutput.Bool || htmlOutput.Bool || epubOutput.Bool {
 		if !root.IsAMP() {
@@ -98,12 +105,13 @@ func main() {
 					UserAgent: *ua,
 				})
 				if err != nil {
-					log.Fatal(err)
+					slog.Error("url2epub.GetHTML failed", "err", err)
+					os.Exit(1)
 				}
 			}
 		}
 		if !root.IsAMP() {
-			log.Print("Not AMP")
+			slog.Debug("Not AMP")
 		}
 
 		node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
@@ -113,7 +121,8 @@ func main() {
 			Grayscale: *grayscale,
 		})
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("url2epub.Readable failed", "err", err)
+			os.Exit(1)
 		}
 
 		switch {
@@ -125,14 +134,16 @@ func main() {
 				Images: images,
 			})
 			if err != nil {
-				log.Fatal(err)
+				slog.Error("url2epub.Epub failed", "err", err)
+				os.Exit(1)
 			}
-			log.Printf("epub id: %v", id)
+			slog.Info("epub generated", "id", id)
 
 		case htmlOutput.Bool:
 			err = html.Render(os.Stdout, node)
 			if err != nil {
-				log.Fatal(err)
+				slog.Error("html.Render failed", "err", err)
+				os.Exit(1)
 			}
 
 		case readableOutput.Bool:
