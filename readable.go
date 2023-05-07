@@ -95,6 +95,7 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 	atom.Li:         emptyStringSet,
 	atom.Main:       emptyStringSet,
 	atom.Mark:       emptyStringSet,
+	atom.Noscript:   emptyStringSet,
 	atom.Ol:         emptyStringSet,
 	atom.P:          emptyStringSet,
 	atom.Picture:    emptyStringSet,
@@ -382,6 +383,28 @@ func (n *Node) readableRecursive(
 		}, nil
 
 	case html.ElementNode:
+		if node.DataAtom == atom.Noscript {
+			child := node.FirstChild
+			if child == nil || child != node.LastChild || child.Type != html.TextNode {
+				// We only care about a single TextNode inside noscript.
+				return nil, nil
+			}
+			childNode, err := html.Parse(strings.NewReader(child.Data))
+			if err != nil {
+				slog.DebugCtx(
+					ctx,
+					"Failed to parse noscript data",
+					"err", err,
+					"data", child.Data,
+				)
+			}
+			if img := FromNode(childNode).FindFirstAtomNode(atom.Img); img != nil {
+				node = img.AsNode()
+			} else {
+				// No img node found
+				return nil, nil
+			}
+		}
 		// Copy key fields.
 		newNode := &html.Node{
 			Type:     node.Type,
