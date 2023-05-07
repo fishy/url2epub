@@ -123,11 +123,6 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 	atom.Ul:         emptyStringSet,
 }
 
-var imgSrcAlternatives = immutable.SetLiteral(
-	"nitro-lazy-src",
-	"data-src",
-)
-
 // The atoms that we need to keep even if they have no attributes and no
 // children after stripping.
 var keepEmptyAtoms = immutable.SetLiteral(
@@ -333,14 +328,11 @@ func tryParseImgSrcset(s string) *url.URL {
 
 func findSrcURLFromIMGNode(
 	node *html.Node,
-	srcIndices []int,
+	srcIndex int,
 	srcsetIndex int,
 ) *url.URL {
-	for _, i := range srcIndices {
-		if i < 0 {
-			continue
-		}
-		if u := tryParseImgURL(node.Attr[i].Val); u != nil {
+	if srcIndex >= 0 {
+		if u := tryParseImgURL(node.Attr[srcIndex].Val); u != nil {
 			return u
 		}
 	}
@@ -424,12 +416,9 @@ func (n *Node) readableRecursive(
 		}
 		srcIndex := -1
 		srcsetIndex := -1
-		var altSrcIndices []int
 		for _, attr := range node.Attr {
 			i := len(newNode.Attr)
-			if newNode.DataAtom == atom.Img && imgSrcAlternatives.Contains(attr.Key) {
-				altSrcIndices = append(altSrcIndices, i)
-			} else if !attrs.Contains(attr.Key) {
+			if !attrs.Contains(attr.Key) {
 				continue
 			}
 			newNode.Attr = append(newNode.Attr, attr)
@@ -444,7 +433,7 @@ func (n *Node) readableRecursive(
 			// Special handling for images.
 			newNode.DataAtom = atom.Img
 			newNode.Data = atom.Img.String()
-			srcURL := findSrcURLFromIMGNode(newNode, append([]int{srcIndex}, altSrcIndices...), srcsetIndex)
+			srcURL := findSrcURLFromIMGNode(newNode, srcIndex, srcsetIndex)
 			if srcURL == nil {
 				// No usable src, skip this image
 				return nil, nil
