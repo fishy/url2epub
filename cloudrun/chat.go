@@ -6,8 +6,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/datastore"
-
-	"go.yhsif.com/url2epub/logger"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -57,7 +56,8 @@ func (e *EntityChatToken) Save(ctx context.Context) error {
 func (e *EntityChatToken) Delete(ctx context.Context) {
 	key := e.datastoreKey()
 	if err := dsClient.Delete(ctx, key); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Failed to delete datastore key",
 			"err", err,
 			"key", key,
@@ -72,7 +72,8 @@ func GetChat(ctx context.Context, id int64) *EntityChatToken {
 	}
 	key := e.datastoreKey()
 	if err := dsClient.Get(ctx, key, e); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Failed to get datastore key",
 			"err", err,
 			"key", key,

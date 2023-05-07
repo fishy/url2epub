@@ -9,8 +9,9 @@ import (
 	neturl "net/url"
 	"strconv"
 
+	"golang.org/x/exp/slog"
+
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 )
 
 const (
@@ -31,7 +32,8 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, title, data, err := getEpub(r.Context(), url, userAgent, gray)
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"getEpub failed",
 			"err", err,
 		)
@@ -94,7 +96,8 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		}
 	}
 	if !root.IsAMP() {
-		logger.For(ctx).Info(
+		slog.InfoCtx(
+			ctx,
 			"Generating epub from non-amp url",
 			"url", baseURL.String(),
 		)

@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"go.yhsif.com/immutable"
+	"golang.org/x/exp/slog"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
 	"go.yhsif.com/url2epub/grayscale"
-	"go.yhsif.com/url2epub/logger"
 )
 
 const (
@@ -506,7 +506,8 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 	defer DrainAndClose(body)
 	img, err := grayscale.FromReader(body)
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Error while trying to grayscale",
 			"err", err,
 			"url", src.String(),
@@ -515,7 +516,8 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 	}
 	reader, err := img.ToJPEG()
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Error while trying to encode grayscaled %q: %v",
 			"err", err,
 			"url", src.String(),

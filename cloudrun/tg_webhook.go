@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"go.yhsif.com/url2epub/logger"
+	"golang.org/x/exp/slog"
+
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
 
@@ -56,7 +57,8 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 		case "url":
 			runes := []rune(message.Text)
 			if int64(len(runes)) < entity.Offset+entity.Length {
-				logger.For(ctx).Error(
+				slog.ErrorCtx(
+					ctx,
 					"Unable to process url entity",
 					"entity", entity,
 					"text", message.Text,
@@ -84,7 +86,8 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"urlHandler: getEpub failed",
 			"err", err,
 			"url", url,
@@ -102,7 +105,8 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	start := time.Now()
 	size := data.Len()
 	defer func() {
-		logger.For(ctx).Info(
+		slog.InfoCtx(
+			ctx,
 			"urlHandler: Uploaded",
 			"took", time.Since(start),
 			"epub size", size,
@@ -122,7 +126,8 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		},
 	})
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"urlHandler: Upload failed",
 			"err", err,
 			"url", url,
@@ -131,7 +136,8 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		return
 	}
 	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
-	logger.For(ctx).Info(
+	slog.InfoCtx(
+		ctx,
 		"urlHandler: Uploaded epub to reMarkable",
 		"epub size", size,
 		"id", id,
@@ -157,7 +163,8 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	sb.WriteString(params.Encode())
 	restURL := fmt.Sprintf(epubMsg, sb.String())
 	replyMessage(ctx, w, message, restURL, true, nil)
-	logger.For(ctx).Info(
+	slog.InfoCtx(
+		ctx,
 		"epubHandler: Generated rest url",
 		"orig url", url,
 		"rest url", restURL,
@@ -176,7 +183,8 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Description: rmDescription,
 	})
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"startHandler: Unable to register",
 			"err", err,
 		)
@@ -191,7 +199,8 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Token: client.RefreshToken,
 	}
 	if err := chat.Save(ctx); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"startHandler: Unable to save chat",
 			"err", err,
 		)
@@ -224,7 +233,8 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirHandler: ListDirs failed",
 			"err", err,
 		)
@@ -257,7 +267,8 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 
 func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirCallbackHandler: Bad callback",
 			"data", data,
 			"callback", callback,
@@ -268,7 +279,8 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirCallbackHandler: Bad callback",
 			"data", data,
 			"chat", callback.Message.Chat.ID,
@@ -279,7 +291,8 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat.ParentID = data
 	if err := chat.Save(ctx); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirCallbackHandler: Unable to save chat",
 			"err", err,
 		)
@@ -288,7 +301,8 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirCallbackHandler: Unable to reply to callback",
 			"err", err,
 		)
@@ -300,7 +314,8 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"dirCallbackHandler: Unable to list dir",
 			"err", err,
 		)

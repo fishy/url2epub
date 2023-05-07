@@ -14,7 +14,6 @@ import (
 	"cloud.google.com/go/datastore"
 	"golang.org/x/exp/slog"
 
-	"go.yhsif.com/url2epub/logger"
 	"go.yhsif.com/url2epub/tgbot"
 )
 
@@ -67,7 +66,8 @@ func main() {
 
 	ctx := context.Background()
 	if err := initDatastoreClient(ctx); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Failed to get data store client",
 			"err", err,
 		)
@@ -77,7 +77,8 @@ func main() {
 	initTwitter(ctx)
 
 	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("K_REVISION"))
-	logger.For(ctx).Info(
+	slog.InfoCtx(
+		ctx,
 		"default user agent",
 		"user-agent", defaultUserAgent,
 	)
@@ -90,17 +91,20 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-		logger.For(ctx).Warn(
+		slog.WarnCtx(
+			ctx,
 			"Using default port",
 			"port", port,
 		)
 	}
-	logger.For(ctx).Info(
+	slog.InfoCtx(
+		ctx,
 		"Started listening",
 		"port", port,
 	)
 
-	logger.For(ctx).Error(
+	slog.ErrorCtx(
+		ctx,
 		"HTTP server returned",
 		"err", http.ListenAndServe(fmt.Sprintf(":%s", port), nil),
 	)
@@ -125,14 +129,15 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Body == nil {
-		logger.For(ctx).Error("Empty webhook request body")
+		slog.ErrorCtx(ctx, "Empty webhook request body")
 		http.NotFound(w, r)
 		return
 	}
 
 	var update tgbot.Update
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Unable to decode json",
 			"err", err,
 		)
@@ -144,7 +149,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		data := callback.Data
 		switch {
 		default:
-			logger.For(ctx).Error(
+			slog.ErrorCtx(
+				ctx,
 				"Bad callback",
 				"data", data,
 				"callback", callback,
@@ -160,7 +166,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if update.Message == nil {
-		logger.For(ctx).Warn("Not a message nor callback, ignoring...", "update", update)
+		slog.WarnCtx(ctx, "Not a message nor callback, ignoring...", "update", update)
 		reply200(w)
 		return
 	}
@@ -200,7 +206,8 @@ func initBot(ctx context.Context) {
 		WebhookPrefix:   webhookPrefix,
 	})
 	if _, err := getBot().SetWebhook(ctx, webhookMaxConn); err != nil {
-		logger.For(ctx).Error(
+		slog.ErrorCtx(
+			ctx,
 			"Failed to set webhook",
 			"err", err,
 		)

@@ -14,8 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/exp/slog"
+
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 )
 
 const (
@@ -50,7 +51,8 @@ func (b *Bot) PostRequest(
 ) (code int, err error) {
 	start := time.Now()
 	defer func() {
-		logger.For(ctx).Debug(
+		slog.DebugCtx(
+			ctx,
 			"tgbot.Bot.PostRequest: HTTP POST",
 			"endpoint", endpoint,
 			"took", time.Since(start),
@@ -129,7 +131,7 @@ func (b *Bot) initHashPrefix(ctx context.Context) {
 	b.hashOnce.Do(func() {
 		hash := sha512.Sum512_224([]byte(b.String()))
 		b.hashPrefix = b.WebhookPrefix + base64.URLEncoding.EncodeToString(hash[:])
-		logger.For(ctx).Debug(fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
+		slog.DebugCtx(ctx, fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
 	})
 }
 

@@ -7,8 +7,9 @@ import (
 	"path"
 	"strings"
 
+	"golang.org/x/exp/slog"
+
 	"go.yhsif.com/url2epub"
-	"go.yhsif.com/url2epub/logger"
 )
 
 // RootDisplayName is the display name to be used by the root directory.
@@ -34,7 +35,8 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 		}
 		indexEntries, err := c.DownloadIndex(ctx, entry.Path)
 		if err != nil {
-			logger.For(ctx).Error(
+			slog.ErrorCtx(
+				ctx,
 				"rmapi.ListDirs: failed to download index file",
 				"err", err,
 				"path", entry.Path,
@@ -49,7 +51,8 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			}
 			resp, err := c.Download15(ctx, index.Path)
 			if err != nil {
-				logger.For(ctx).Error(
+				slog.ErrorCtx(
+					ctx,
 					"rmapi.ListDirs: failed to download file for index",
 					"err", err,
 					"suffix", MetadataSuffix,
@@ -62,7 +65,8 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 				defer url2epub.DrainAndClose(resp.Body)
 				return json.NewDecoder(resp.Body).Decode(&meta)
 			}(); err != nil {
-				logger.For(ctx).Error(
+				slog.ErrorCtx(
+					ctx,
 					"rmapi.ListDirs: failed to parse file for index",
 					"err", err,
 					"suffix", MetadataSuffix,
@@ -77,7 +81,8 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			break
 		}
 		if !metadataFound {
-			logger.For(ctx).Warn(
+			slog.WarnCtx(
+				ctx,
 				"rmapi.ListDirs: file not found for entry",
 				"lastErr", err,
 				"suffix", MetadataSuffix,
