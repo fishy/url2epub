@@ -12,7 +12,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var logger = slog.New(slog.NewTextHandler(os.Stderr))
+var logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 const (
 	mimetypeFileName = "mimetype"

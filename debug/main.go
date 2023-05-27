@@ -74,10 +74,10 @@ func main() {
 	)
 	flag.Parse()
 
-	slog.SetDefault(slog.New(ctxslog.ContextHandler(slog.HandlerOptions{
+	slog.SetDefault(slog.New(ctxslog.ContextHandler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelDebug,
-	}.NewTextHandler(os.Stderr))))
+	}))))
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
