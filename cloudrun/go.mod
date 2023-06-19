@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	cloud.google.com/go/datastore v1.11.0
-	go.yhsif.com/ctxslog v0.0.0-20230618175150-3cf05cbd6262
+	go.yhsif.com/ctxslog v0.0.0-20230619054812-a528b6efdfd2
 	go.yhsif.com/url2epub v0.4.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/image v0.8.0

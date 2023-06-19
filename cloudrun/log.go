@@ -10,7 +10,7 @@ import (
 )
 
 func initLogger() {
-	logger := slog.New(ctxslog.ContextHandler(ctxslog.CallstackHandler(
+	logger := slog.New(ctxslog.ContextHandler(ctxslog.JSONCallstackHandler(
 		slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     slog.LevelDebug,
