@@ -31,7 +31,7 @@ const (
 By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
 
-	notStartedMsg = `🚫 You did not run ` + startCommand + ` command yet.`
+	notStartedMsg = `🚫 You had not run ` + startCommand + ` command yet.`
 
 	stopMsg = `✅ Successfully deleted your reMarkable token.
 You can now go to https://my.remarkable.com/device/desktop to revoke access.`
@@ -109,7 +109,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 			ctx,
 			"urlHandler: Uploaded",
 			"took", time.Since(start),
-			"epub size", size,
+			"epubSize", size,
 			"err", err,
 		)
 	}()
@@ -139,9 +139,10 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	slog.InfoCtx(
 		ctx,
 		"urlHandler: Uploaded epub to reMarkable",
-		"epub size", size,
+		"epubSize", size,
 		"id", id,
 		"title", title,
+		"chatId", message.Chat.ID,
 	)
 }
 
@@ -166,8 +167,8 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	slog.InfoCtx(
 		ctx,
 		"epubHandler: Generated rest url",
-		"orig url", url,
-		"rest url", restURL,
+		"origUrl", url,
+		"restUrl", restURL,
 	)
 }
 
