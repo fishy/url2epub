@@ -35,7 +35,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 		}
 		indexEntries, err := c.DownloadIndex(ctx, entry.Path)
 		if err != nil {
-			slog.ErrorCtx(
+			slog.ErrorContext(
 				ctx,
 				"rmapi.ListDirs: failed to download index file",
 				"err", err,
@@ -51,7 +51,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			}
 			resp, err := c.Download15(ctx, index.Path)
 			if err != nil {
-				slog.ErrorCtx(
+				slog.ErrorContext(
 					ctx,
 					"rmapi.ListDirs: failed to download file for index",
 					"err", err,
@@ -65,7 +65,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 				defer url2epub.DrainAndClose(resp.Body)
 				return json.NewDecoder(resp.Body).Decode(&meta)
 			}(); err != nil {
-				slog.ErrorCtx(
+				slog.ErrorContext(
 					ctx,
 					"rmapi.ListDirs: failed to parse file for index",
 					"err", err,
@@ -81,7 +81,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			break
 		}
 		if !metadataFound {
-			slog.WarnCtx(
+			slog.WarnContext(
 				ctx,
 				"rmapi.ListDirs: file not found for entry",
 				"lastErr", err,

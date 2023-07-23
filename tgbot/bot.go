@@ -51,7 +51,7 @@ func (b *Bot) PostRequest(
 ) (code int, err error) {
 	start := time.Now()
 	defer func() {
-		slog.DebugCtx(
+		slog.DebugContext(
 			ctx,
 			"tgbot.Bot.PostRequest: HTTP POST",
 			"endpoint", endpoint,
@@ -131,7 +131,7 @@ func (b *Bot) initHashPrefix(ctx context.Context) {
 	b.hashOnce.Do(func() {
 		hash := sha512.Sum512_224([]byte(b.String()))
 		b.hashPrefix = b.WebhookPrefix + base64.URLEncoding.EncodeToString(hash[:])
-		slog.DebugCtx(ctx, fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
+		slog.DebugContext(ctx, fmt.Sprintf("hashPrefix == %s", b.hashPrefix))
 	})
 }
 

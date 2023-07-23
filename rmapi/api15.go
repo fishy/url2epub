@@ -249,7 +249,7 @@ func (c *Client) DownloadIndex(ctx context.Context, path string) ([]IndexEntry, 
 		}
 		entry, err := ParseIndexEntry(text)
 		if err != nil {
-			slog.ErrorCtx(ctx, "Failed to parse index line", "err", err)
+			slog.ErrorContext(ctx, "Failed to parse index line", "err", err)
 			continue
 		}
 		entries = append(entries, entry)

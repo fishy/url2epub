@@ -383,7 +383,7 @@ func (n *Node) readableRecursive(
 			}
 			childNode, err := html.Parse(strings.NewReader(child.Data))
 			if err != nil {
-				slog.DebugCtx(
+				slog.DebugContext(
 					ctx,
 					"Failed to parse noscript data",
 					"err", err,
@@ -518,7 +518,7 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 	defer DrainAndClose(body)
 	img, err := grayscale.FromReader(body)
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Error while trying to grayscale",
 			"err", err,
@@ -528,7 +528,7 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 	}
 	reader, err := img.ToJPEG()
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Error while trying to encode grayscaled %q: %v",
 			"err", err,

@@ -56,7 +56,7 @@ func (e *EntityChatToken) Save(ctx context.Context) error {
 func (e *EntityChatToken) Delete(ctx context.Context) {
 	key := e.datastoreKey()
 	if err := dsClient.Delete(ctx, key); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Failed to delete datastore key",
 			"err", err,
@@ -72,7 +72,7 @@ func GetChat(ctx context.Context, id int64) *EntityChatToken {
 	}
 	key := e.datastoreKey()
 	if err := dsClient.Get(ctx, key, e); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Failed to get datastore key",
 			"err", err,

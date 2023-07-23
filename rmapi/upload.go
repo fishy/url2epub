@@ -88,9 +88,6 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 	})
 
 	fileName := args.ID + args.Type.Ext()
-	if err != nil {
-		return fmt.Errorf("rmapi.Client.Upload: failed to generate gcs path for %s: %w", fileName, err)
-	}
 	filePath, fileSize, err := c.Upload15(ctx, args.Data)
 	if err != nil {
 		return fmt.Errorf("rmapi.Client.Upload: failed to upload %s: %w", fileName, err)

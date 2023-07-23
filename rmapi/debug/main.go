@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.yhsif.com/url2epub/rmapi"
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -52,6 +53,11 @@ var (
 func main() {
 	flag.Parse()
 
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	})))
+
 	if (*refreshToken != "") == (*token != "") {
 		log.Fatal("Exactly one of refresh-token and token flag is required.")
 	}
@@ -69,7 +75,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to register client: %v", err)
 		}
-		log.Printf("Your refresh token is: %q", client.RefreshToken)
+		slog.Info("Got refresh token", "refreshToken", client.RefreshToken)
 	} else {
 		client = &rmapi.Client{
 			RefreshToken: *refreshToken,
@@ -80,7 +86,7 @@ func main() {
 		if err := doUpload(ctx, client); err != nil {
 			log.Fatalf("Unable to upload: %v", err)
 		} else {
-			log.Print("Upload succeeded.")
+			slog.Info("Upload suceeded.")
 		}
 	}
 }
@@ -111,7 +117,7 @@ func doUpload(ctx context.Context, client *rmapi.Client) error {
 		title = strings.TrimSuffix(filepath.Base(*upload), filepath.Ext(*upload))
 	}
 
-	log.Printf("Uploading using id %q", id.String())
+	slog.Info("Uploading...", "id", id)
 
 	return client.Upload(ctx, rmapi.UploadArgs{
 		ID:       id.String(),

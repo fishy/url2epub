@@ -102,7 +102,7 @@ func fontHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 
 func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Bad callback",
 			"data", data,
@@ -114,7 +114,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Bad callback",
 			"data", data,
@@ -126,7 +126,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 	}
 	chat.Font = data
 	if err := chat.Save(ctx); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Unable to save chat",
 			"err", err,
@@ -136,7 +136,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"Unable to reply to callback",
 			"err", err,

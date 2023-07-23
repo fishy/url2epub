@@ -57,7 +57,7 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 		case "url":
 			runes := []rune(message.Text)
 			if int64(len(runes)) < entity.Offset+entity.Length {
-				slog.ErrorCtx(
+				slog.ErrorContext(
 					ctx,
 					"Unable to process url entity",
 					"entity", entity,
@@ -86,7 +86,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"urlHandler: getEpub failed",
 			"err", err,
@@ -105,7 +105,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	start := time.Now()
 	size := data.Len()
 	defer func() {
-		slog.InfoCtx(
+		slog.InfoContext(
 			ctx,
 			"urlHandler: Uploaded",
 			"took", time.Since(start),
@@ -126,7 +126,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		},
 	})
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"urlHandler: Upload failed",
 			"err", err,
@@ -136,7 +136,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		return
 	}
 	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
-	slog.InfoCtx(
+	slog.InfoContext(
 		ctx,
 		"urlHandler: Uploaded epub to reMarkable",
 		"epubSize", size,
@@ -164,7 +164,7 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	sb.WriteString(params.Encode())
 	restURL := fmt.Sprintf(epubMsg, sb.String())
 	replyMessage(ctx, w, message, restURL, true, nil)
-	slog.InfoCtx(
+	slog.InfoContext(
 		ctx,
 		"epubHandler: Generated rest url",
 		"origUrl", url,
@@ -184,7 +184,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Description: rmDescription,
 	})
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"startHandler: Unable to register",
 			"err", err,
@@ -200,7 +200,7 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		Token: client.RefreshToken,
 	}
 	if err := chat.Save(ctx); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"startHandler: Unable to save chat",
 			"err", err,
@@ -234,7 +234,7 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirHandler: ListDirs failed",
 			"err", err,
@@ -268,7 +268,7 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 
 func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirCallbackHandler: Bad callback",
 			"data", data,
@@ -280,7 +280,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirCallbackHandler: Bad callback",
 			"data", data,
@@ -292,7 +292,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	chat.ParentID = data
 	if err := chat.Save(ctx); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirCallbackHandler: Unable to save chat",
 			"err", err,
@@ -302,7 +302,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		return
 	}
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirCallbackHandler: Unable to reply to callback",
 			"err", err,
@@ -315,7 +315,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	}
 	dirs, err := client.ListDirs(ctx)
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"dirCallbackHandler: Unable to list dir",
 			"err", err,

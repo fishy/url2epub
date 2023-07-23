@@ -32,7 +32,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, title, data, err := getEpub(r.Context(), url, userAgent, gray)
 	if err != nil {
-		slog.ErrorCtx(
+		slog.ErrorContext(
 			ctx,
 			"getEpub failed",
 			"err", err,
@@ -96,7 +96,7 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		}
 	}
 	if !root.IsAMP() {
-		slog.InfoCtx(
+		slog.InfoContext(
 			ctx,
 			"Generating epub from non-amp url",
 			"url", baseURL.String(),
