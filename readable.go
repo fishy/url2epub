@@ -25,6 +25,8 @@ const (
 	imgSrc    = "src"
 	imgSrcset = "srcset"
 	jpgExt    = ".jpg"
+
+	langKey = "lang"
 )
 
 var emptyStringSet = immutable.EmptySet[string]()
@@ -263,6 +265,14 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		Type:     html.ElementNode,
 		DataAtom: atom.Html,
 		Data:     atom.Html.String(),
+	}
+	if lang := n.GetLang(); lang != "" {
+		root.Attr = []html.Attribute{
+			{
+				Key: langKey,
+				Val: lang,
+			},
+		}
 	}
 	if head != nil {
 		root.AppendChild(head)

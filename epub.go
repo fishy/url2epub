@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,11 +37,14 @@ const (
 
 	epubContentDir      = "content"
 	epubArticleFilename = "article.xhtml"
+	epubNavFilename     = "nav.xhtml"
+	epubOpfFullpath     = epubContentDir + "/content.opf"
+)
 
-	epubOpfFullpath = epubContentDir + "/content.opf"
-	epubOpfTemplate = `<?xml version="1.0" encoding="UTF-8"?>
+var (
+	epubOpfTmpl = template.Must(template.New("opf").Parse(`<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookID">
- <metadata xmlns:dc="http://purl.org/dc/elements/0.1/">
+ <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
   <dc:identifier id="BookID">{{.ID}}</dc:identifier>
   <dc:title>{{.Title}}</dc:title>
   {{if .Lang -}}
@@ -49,6 +53,7 @@ const (
   <meta property="dcterms:modified">{{.Time}}</meta>
  </metadata>
  <manifest>
+  <item id="nav" href="{{.NavPath}}" media-type="application/xhtml+xml" properties="nav"/>
   <item id="{{.ArticlePath}}" href="{{.ArticlePath}}" media-type="application/xhtml+xml"/>
   {{range $path, $type := .Images}}
   <item id="{{$path}}" href="{{$path}}" media-type="{{$type}}"/>
@@ -58,10 +63,25 @@ const (
   <itemref idref="{{.ArticlePath}}"/>
  </spine>
 </package>
-`
-)
+`))
 
-var epubOpfTmpl = template.Must(template.New("opf").Parse(epubOpfTemplate))
+	epubNavTmpl = template.Must(template.New("nav").Parse(`<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>{{.Title}}</title>
+  <meta http-equiv="default-style" content="text/html; charset=utf-8"></meta>
+ </head>
+ <body>
+  <nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc">
+   <h2>Contents</h2>
+   <ol epub:type="list">
+    <li><a href="{{.ArticlePath}}">Content</a></li>
+   </ol>
+  </nav>
+ </body>
+</html>
+`))
+)
 
 type epubOpfData struct {
 	ID          string
@@ -69,6 +89,7 @@ type epubOpfData struct {
 	Lang        string
 	Time        string
 	ArticlePath string
+	NavPath     string
 	Images      map[string]string
 }
 
@@ -91,35 +112,29 @@ type EpubArgs struct {
 
 // Epub creates an Epub 3.0 file from given content.
 func Epub(args EpubArgs) (id string, err error) {
-	var randomID uuid.UUID
-	randomID, err = uuid.NewRandom()
+	randomID, err := uuid.NewRandom()
 	if err != nil {
-		err = fmt.Errorf("epub: unable to generate uuid: %w", err)
-		return
+		return "", fmt.Errorf("epub: unable to generate uuid: %w", err)
 	}
-	id = randomID.String()
 
 	z := zip.NewWriter(args.Dest)
 	defer func() {
-		closeErr := z.Close()
-		if err == nil {
-			err = closeErr
+		if closeErr := z.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close error: %w", closeErr))
 		}
 	}()
 
 	// mimetype must be the first file in the zip,
 	// and must use Store instead of Deflate.
-	err = ziputil.StoreFile(z, epubMimetypeFilename, ziputil.StringWriterTo(EpubMimeType))
-	if err != nil {
-		return
+	if err := ziputil.StoreFile(z, epubMimetypeFilename, ziputil.StringWriterTo(EpubMimeType)); err != nil {
+		return "", err
 	}
 
-	err = ziputil.WriteFile(z, epubContainerFilename, ziputil.StringWriterTo(epubContainerContent))
-	if err != nil {
-		return
+	if err := ziputil.WriteFile(z, epubContainerFilename, ziputil.StringWriterTo(epubContainerContent)); err != nil {
+		return "", err
 	}
 
-	err = ziputil.WriteFile(
+	if err := ziputil.WriteFile(
 		z,
 		path.Join(epubContentDir, epubArticleFilename),
 		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
@@ -127,14 +142,13 @@ func Epub(args EpubArgs) (id string, err error) {
 			// use case.
 			return 0, html.Render(w, args.Node)
 		}),
-	)
-	if err != nil {
-		return
+	); err != nil {
+		return "", err
 	}
 
 	imageContentTypes := make(map[string]string, len(args.Images))
 	for f, reader := range args.Images {
-		err = func() (err error) {
+		if err := func() (err error) {
 			filename := path.Join(epubContentDir, f)
 			if readCloser, ok := reader.(io.ReadCloser); ok {
 				defer DrainAndClose(readCloser)
@@ -161,27 +175,44 @@ func Epub(args EpubArgs) (id string, err error) {
 					return io.Copy(w, reader)
 				}),
 			)
-		}()
-		if err != nil {
-			return
+		}(); err != nil {
+			return "", err
 		}
 	}
 
-	err = ziputil.WriteFile(
+	data := epubOpfData{
+		ID:          html.EscapeString(id),
+		Title:       html.EscapeString(args.Title),
+		Lang:        html.EscapeString(FromNode(args.Node).GetLang()),
+		Time:        time.Now().UTC().Format(time.RFC3339),
+		ArticlePath: epubArticleFilename,
+		NavPath:     epubNavFilename,
+		Images:      imageContentTypes,
+	}
+	if err := ziputil.WriteFile(
+		z,
+		path.Join(epubContentDir, epubNavFilename),
+		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
+			// NOTE: this does not return the correct n, but it's good enough for our
+			// use case.
+			return 0, epubNavTmpl.Execute(w, data)
+		}),
+	); err != nil {
+		return "", err
+	}
+
+	id = randomID.String()
+	if err := ziputil.WriteFile(
 		z,
 		epubOpfFullpath,
 		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
 			// NOTE: this does not return the correct n, but it's good enough for our
 			// use case.
-			return 0, epubOpfTmpl.Execute(w, epubOpfData{
-				ID:          html.EscapeString(id),
-				Title:       html.EscapeString(args.Title),
-				Lang:        html.EscapeString(FromNode(args.Node).GetLang()),
-				Time:        time.Now().Format(time.RFC3339),
-				ArticlePath: epubArticleFilename,
-				Images:      imageContentTypes,
-			})
+			return 0, epubOpfTmpl.Execute(w, data)
 		}),
-	)
-	return
+	); err != nil {
+		return "", err
+	}
+
+	return id, nil
 }

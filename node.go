@@ -79,7 +79,7 @@ func (n *Node) GetLang() string {
 		return ""
 	}
 	for _, attr := range n.Attr {
-		if attr.Key == "lang" {
+		if attr.Key == langKey {
 			return attr.Val
 		}
 	}
