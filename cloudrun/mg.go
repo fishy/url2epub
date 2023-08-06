@@ -39,7 +39,7 @@ func sendEmail(ctx context.Context, email string, title string, epub io.Reader, 
 		"url2epub",
 		fmt.Sprintf("chat-%d", chatID),
 	} {
-		if err := writer.WriteField("tag", tag); err != nil {
+		if err := writer.WriteField("o:tag", tag); err != nil {
 			return fmt.Errorf("sendEmail: failed to write multipart tag %q: %w", tag, err)
 		}
 	}
