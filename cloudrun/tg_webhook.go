@@ -110,7 +110,12 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	switch chat.Type {
 	default:
 		// Should not happen, but just in case
-		// TODO
+		slog.ErrorContext(
+			ctx,
+			"urlHandler: unknown chat type",
+			"type", chat.Type,
+		)
+		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 
 	case AccountTypeRM:
 		uploadRM(ctx, w, message, chat, id, url, title, data)

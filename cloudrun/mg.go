@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -76,14 +77,18 @@ func sendEmail(ctx context.Context, email string, title string, epub io.Reader, 
 		return err
 	}
 
-	var body [2048]byte
-	n, e := resp.Body.Read(body[:])
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+	body, e := io.ReadAll(io.LimitReader(resp.Body, 2048))
+	body = maybeDecodeBase64Body(body)
 	slog.DebugContext(
 		ctx,
 		"sendEmail mailgun response",
 		"code", resp.StatusCode,
 		"err", e,
-		"body", body[:n],
+		"body", body,
 	)
 	if resp.StatusCode < 400 {
 		return nil
@@ -92,10 +97,20 @@ func sendEmail(ctx context.Context, email string, title string, epub io.Reader, 
 	return fmt.Errorf(
 		"sendEmail: mailgun returned non-200 code: %d, body: %q",
 		resp.StatusCode,
-		body[:n],
+		body,
 	)
 }
 
 func mgFrom() string {
 	return os.Getenv("MAILGUN_FROM")
+}
+
+func maybeDecodeBase64Body(body []byte) []byte {
+	// Mailgun seems to like to return base64 encoded json body, try decode it,
+	// but return body as-is if it's not base64 encoded
+	dst := make([]byte, base64.StdEncoding.DecodedLen(len(body)))
+	if n, err := base64.StdEncoding.Decode(dst, body); err == nil {
+		return dst[:n]
+	}
+	return body
 }
