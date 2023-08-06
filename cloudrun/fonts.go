@@ -124,7 +124,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 		reply200(w)
 		return
 	}
-	chat.Font = data
+	chat.RMFont = data
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,

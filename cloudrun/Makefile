@@ -6,8 +6,14 @@ region=us-central1
 cloudrunname=url2epub
 image=url2epub
 
-secret_telegram_token=telegram-token
-secret_twitter_bearer=twitter-bearer
+# secret token names on https://console.cloud.google.com/security/secret-manager
+telegram_token=telegram-token
+twitter_bearer=twitter-bearer
+mailgun_token=mailgun-token
+
+# mailgun related settings
+mailgun_domain=mg.fishy.me
+mailgun_from=url2epub@fishy.me
 
 gcloud=$(GCLOUD) --project=$(project)
 docker_image=$(region)-docker.pkg.dev/$(project)/$(image)/$(image)
@@ -27,11 +33,13 @@ deploy:
 		--region $(region) $(cloudrunname) \
 		--update-env-vars CLOUD_PROJECT_ID=$(project) \
 		--update-env-vars VERSION_TAG=$(version_tag) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(secret_telegram_token):latest,SECRET_TWITTER_BEARER=$(secret_twitter_bearer):latest"
+		--update-env-vars MAILGUN_DOMAIN=$(mailgun_domain) \
+		--update-env-vars MAILGUN_FROM=$(mailgun_from) \
+		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest"
 	rm -Rf vendor
 
 .PHONY: update-secrets
 
 update-secrets:
 	$(gcloud) run services update $(cloudrunname) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(secret_telegram_token):latest,SECRET_TWITTER_BEARER=$(secret_twitter_bearer):latest"
+		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest"

@@ -14,12 +14,66 @@ const (
 	chatKind = "rmapi-token"
 )
 
+type AccountType int
+
+const (
+	_ AccountType = iota
+	AccountTypeRM
+	AccountTypeKindle
+)
+
+func (at AccountType) String() string {
+	switch at {
+	default:
+		return fmt.Sprintf("<UNKNOWN-%d>", at)
+	case AccountTypeRM:
+		return "rm"
+	case AccountTypeKindle:
+		return "kindle"
+	}
+}
+
+func (at AccountType) MarshalText() ([]byte, error) {
+	switch at {
+	default:
+		return nil, fmt.Errorf("unknown account type %d", at)
+
+	case AccountTypeRM:
+		fallthrough
+	case AccountTypeKindle:
+		return []byte(at.String()), nil
+	}
+}
+
+func (at *AccountType) UnmarshalText(text []byte) error {
+	switch strings.ToLower(strings.TrimSpace(string(text))) {
+	default:
+		return fmt.Errorf("unknown account type %q", text)
+
+	case "":
+		// special default fallback for backward compatibility
+		fallthrough
+	case "rm":
+		*at = AccountTypeRM
+
+	case "kindle":
+		*at = AccountTypeKindle
+	}
+	return nil
+}
+
 // EntityChatToken is the entity rmapi token for a chat stored in datastore.
 type EntityChatToken struct {
-	Chat     int64  `datastore:"chat" json:"chat"`
-	Token    string `datastore:"token" json:"token"`
-	ParentID string `datastore:"parent" json:"parent"`
-	Font     string `datastore:"font" json:"font"`
+	Chat int64       `datastore:"chat" json:"chat"`
+	Type AccountType `datastore:"type" json:"type"`
+
+	// reMarkable related fields
+	RMToken    string `datastore:"token" json:"token"`
+	RMParentID string `datastore:"parent" json:"parent"`
+	RMFont     string `datastore:"font" json:"font"`
+
+	// kindle related fields
+	KindleEmail string `datastore:"email" json:"email"`
 }
 
 func (e *EntityChatToken) getKey() string {
@@ -32,12 +86,12 @@ func (e *EntityChatToken) datastoreKey() *datastore.Key {
 
 // GetParentID returns the ParentID to use, after stripping prefix,
 func (e *EntityChatToken) GetParentID() string {
-	return strings.TrimPrefix(e.ParentID, dirIDPrefix)
+	return strings.TrimPrefix(e.RMParentID, dirIDPrefix)
 }
 
 // GetFont returns the Font to use, after stripping prefix,
 func (e *EntityChatToken) GetFont() string {
-	return strings.TrimPrefix(e.Font, fontPrefix)
+	return strings.TrimPrefix(e.RMFont, fontPrefix)
 }
 
 // SaveDatastore saves this entity into datastore.

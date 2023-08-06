@@ -146,6 +146,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if callback := update.Callback; callback != nil {
+		ctx := chatContext(ctx, callback.Message.Chat.ID)
 		data := callback.Data
 		switch {
 		default:
@@ -157,6 +158,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			)
 			getBot().ReplyCallback(ctx, callback.ID, unknownCallback)
 			reply200(w)
+
 		case strings.HasPrefix(data, dirIDPrefix):
 			dirCallbackHandler(ctx, w, data, callback)
 		case strings.HasPrefix(data, fontPrefix):
@@ -170,6 +172,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		reply200(w)
 		return
 	}
+	ctx = chatContext(ctx, update.Message.Chat.ID)
 	text := update.Message.Text
 	switch {
 	default:

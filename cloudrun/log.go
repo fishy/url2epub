@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 
 	"go.yhsif.com/ctxslog"
 	"golang.org/x/exp/slog"
@@ -17,6 +18,15 @@ func initLogger() {
 			ReplaceAttr: ctxslog.ChainReplaceAttr(
 				ctxslog.GCPKeys,
 				ctxslog.StringDuration,
+				func(groups []string, a slog.Attr) slog.Attr {
+					switch a.Value.Kind() {
+					case slog.KindInt64:
+						a.Value = slog.StringValue(strconv.FormatInt(a.Value.Int64(), 10))
+					case slog.KindUint64:
+						a.Value = slog.StringValue(strconv.FormatUint(a.Value.Uint64(), 10))
+					}
+					return a
+				},
 			),
 		}),
 		slog.LevelError,
@@ -32,4 +42,8 @@ func logContext(r *http.Request) context.Context {
 		r.Context(),
 		"httpRequest", ctxslog.HTTPRequest(r, ctxslog.GCPRealIP),
 	)
+}
+
+func chatContext(ctx context.Context, id int64) context.Context {
+	return ctxslog.Attach(ctx, slog.String("chatID", strconv.FormatInt(id, 10)))
 }
