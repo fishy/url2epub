@@ -110,15 +110,20 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	switch chat.Type {
 	default:
 		// Should not happen, but just in case
-		slog.ErrorContext(
+		slog.WarnContext(
 			ctx,
 			"urlHandler: unknown chat type",
 			"type", chat.Type,
 		)
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 
+	case 0:
+		// Should not happen, but just in case
+		slog.WarnContext(ctx, "urlHandler: chat type = 0")
+		fallthrough
 	case AccountTypeRM:
 		uploadRM(ctx, w, message, chat, id, url, title, data)
+
 	case AccountTypeKindle:
 		sendKindleEmail(ctx, w, message, chat, url, title, data)
 	}
