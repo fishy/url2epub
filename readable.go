@@ -1,6 +1,7 @@
 package url2epub
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -519,14 +520,22 @@ func (n *Node) readableRecursive(
 func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader, gray bool) {
 	body, _, err := get(ctx, src, userAgent)
 	if err != nil {
-		return
-	}
-	if !gray {
-		*dest = body
+		slog.ErrorContext(
+			ctx,
+			"Error while trying to get image",
+			"err", err,
+			"url", src.String(),
+		)
 		return
 	}
 	defer DrainAndClose(body)
-	img, err := grayscale.FromReader(body)
+	if !gray {
+		buf := new(bytes.Buffer)
+		io.Copy(buf, body)
+		*dest = buf
+		return
+	}
+	img, orig, err := grayscale.FromReader(body)
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -534,6 +543,7 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 			"err", err,
 			"url", src.String(),
 		)
+		*dest = orig
 		return
 	}
 	reader, err := img.ToJPEG()
@@ -544,6 +554,7 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 			"err", err,
 			"url", src.String(),
 		)
+		*dest = orig
 		return
 	}
 	*dest = reader
