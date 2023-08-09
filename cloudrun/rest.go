@@ -5,11 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	neturl "net/url"
 	"strconv"
-
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub"
 )

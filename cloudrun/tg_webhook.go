@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	neturl "net/url"
 	"sort"
 	"strings"
 	"time"
-
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"

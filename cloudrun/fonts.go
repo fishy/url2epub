@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
-
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub/tgbot"
 )

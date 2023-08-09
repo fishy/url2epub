@@ -5,11 +5,11 @@ import (
 	"flag"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"go.yhsif.com/url2epub/ziputil"
-	"golang.org/x/exp/slog"
 )
 
 var logger = slog.New(slog.NewTextHandler(os.Stderr, nil))

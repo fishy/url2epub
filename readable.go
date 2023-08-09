@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"path"
 	"regexp"
@@ -15,7 +16,6 @@ import (
 	"time"
 
 	"go.yhsif.com/immutable"
-	"golang.org/x/exp/slog"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"go.yhsif.com/url2epub/rmapi"
-	"golang.org/x/exp/slog"
 )
 
 var (

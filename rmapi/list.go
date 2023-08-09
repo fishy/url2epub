@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
-
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub"
 )

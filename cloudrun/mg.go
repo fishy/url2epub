@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"os"
-
-	"golang.org/x/exp/slog"
 )
 
 const (

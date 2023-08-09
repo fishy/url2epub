@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub/tgbot"
 )

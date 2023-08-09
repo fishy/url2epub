@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strconv"
@@ -17,7 +18,6 @@ import (
 	"time"
 
 	"go.yhsif.com/immutable"
-	"golang.org/x/exp/slog"
 
 	"go.yhsif.com/url2epub"
 )

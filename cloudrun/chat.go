@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"cloud.google.com/go/datastore"
-	"golang.org/x/exp/slog"
 )
 
 const (

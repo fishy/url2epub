@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
 
 	"go.yhsif.com/ctxslog"
 	"go.yhsif.com/flagutils"
-	"golang.org/x/exp/slog"
 	"golang.org/x/net/html"
 
 	"go.yhsif.com/url2epub"

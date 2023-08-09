@@ -1,12 +1,11 @@
 module go.yhsif.com/url2epub/cloudrun
 
-go 1.20
+go 1.21
 
 require (
 	cloud.google.com/go/datastore v1.13.0
-	go.yhsif.com/ctxslog v0.0.0-20230619054812-a528b6efdfd2
+	go.yhsif.com/ctxslog v1.0.0
 	go.yhsif.com/url2epub v0.4.0
-	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	golang.org/x/image v0.10.0
 )
 
