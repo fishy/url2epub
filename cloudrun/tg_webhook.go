@@ -30,7 +30,7 @@ const (
 
 To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".
 
-To link your kindle account (experimental), type "` + startCommand + ` kindle <send-to-kindle-email>". You need to add "%s" to your "Approved Personal Document E-mail List".`
+To link your kindle device (experimental), type "` + startCommand + ` kindle <send-to-kindle-email>". You need to add "%s" to your "Approved Personal Document E-mail List".`
 	startSuccessRM = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/device/desktop).
 By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
@@ -52,9 +52,9 @@ You can now go to https://my.remarkable.com/device/desktop to revoke access if i
 	unsupportedURLmsg = `⚠️ Unsupported URL: "%s"`
 	failedEpubMsg     = `🚫 Failed to generate epub from URL: "%s"`
 	failedUpload      = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
-	failedEmail       = `🚫 Failed to email epub to your kindle account for URL: "%s"`
+	failedEmail       = `🚫 Failed to email epub to your kindle device for URL: "%s"`
 	successUpload     = `✅ Uploaded "%s.epub" (%s) to your reMarkable account from URL: "%s"`
-	successEmail      = `✅ Sent "%s.epub" (%s) to your kindle account from URL: "%s"`
+	successEmail      = `✅ Sent "%s.epub" (%s) to your kindle device from URL: "%s"`
 	epubMsg           = "ℹ️ Download your epub file here: %s"
 )
 
