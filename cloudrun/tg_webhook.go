@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
@@ -62,8 +63,8 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 	for _, entity := range message.Entities {
 		switch entity.Type {
 		case "url":
-			runes := []rune(message.Text)
-			if int64(len(runes)) < entity.Offset+entity.Length {
+			u16 := utf16.Encode([]rune(message.Text))
+			if int64(len(u16)) < entity.Offset+entity.Length {
 				slog.ErrorContext(
 					ctx,
 					"Unable to process url entity",
@@ -72,7 +73,7 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 				)
 				continue
 			}
-			return string(runes[entity.Offset : entity.Offset+entity.Length])
+			return string(utf16.Decode(u16[entity.Offset : entity.Offset+entity.Length]))
 		case "text_link":
 			return entity.URL
 		}
