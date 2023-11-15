@@ -94,12 +94,6 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	}
 	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
 	if err != nil {
-		slog.ErrorContext(
-			ctx,
-			"urlHandler: getEpub failed",
-			"err", err,
-			"url", url,
-		)
 		if errors.Is(err, errUnsupportedURL) {
 			replyMessage(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
 		} else {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	neturl "net/url"
 	"strconv"
+	"time"
 
 	"go.yhsif.com/url2epub"
 )
@@ -29,13 +30,8 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	if passthroughUA {
 		userAgent = r.Header.Get("user-agent")
 	}
-	_, title, data, err := getEpub(r.Context(), url, userAgent, gray)
+	_, title, data, err := getEpub(ctx, url, userAgent, gray)
 	if err != nil {
-		slog.ErrorContext(
-			ctx,
-			"getEpub failed",
-			"err", err,
-		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -54,6 +50,30 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 	if ua == "" {
 		ua = defaultUserAgent
 	}
+
+	defer func(start time.Time) {
+		args := []any{
+			slog.Duration("took", time.Since(start)),
+			slog.String("url", url),
+			slog.String("ua", ua),
+		}
+		level := slog.LevelDebug
+		if err != nil {
+			args = append(
+				args,
+				slog.Any("err", err),
+			)
+			level = slog.LevelError
+		} else {
+			args = append(
+				args,
+				slog.String("id", id),
+				slog.String("title", title),
+				slog.Int("size", data.Len()),
+			)
+		}
+		slog.Log(ctx, level, "getEpub finished", args...)
+	}(time.Now())
 
 	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
 	defer cancel()
