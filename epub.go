@@ -42,7 +42,9 @@ const (
 )
 
 var (
-	epubOpfTmpl = template.Must(template.New("opf").Parse(`<?xml version="1.0" encoding="UTF-8"?>
+	epubOpfTmpl = template.Must(template.New("opf").Funcs(template.FuncMap{
+		"CleanPath": path.Base,
+	}).Parse(`<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookID">
  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
   <dc:identifier id="BookID">{{.ID}}</dc:identifier>
@@ -54,7 +56,7 @@ var (
   <item id="nav" href="{{.NavPath}}" media-type="application/xhtml+xml" properties="nav"/>
   <item id="{{.ArticlePath}}" href="{{.ArticlePath}}" media-type="application/xhtml+xml"/>
   {{range $path, $type := .Images}}
-  <item id="{{$path}}" href="{{$path}}" media-type="{{$type}}"/>
+  <item id="{{$path | CleanPath}}" href="{{$path}}" media-type="{{$type}}"/>
 	{{- end}}
  </manifest>
  <spine>
