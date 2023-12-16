@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"strings"
 	"text/template"
 	"time"
 
@@ -43,7 +44,12 @@ const (
 
 var (
 	epubOpfTmpl = template.Must(template.New("opf").Funcs(template.FuncMap{
-		"CleanPath": path.Base,
+		"CleanPath": func(orig string) string {
+			id := orig
+			id = strings.ReplaceAll(id, ".", "_")
+			id = strings.ReplaceAll(id, "/", "_")
+			return id
+		},
 	}).Parse(`<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:opf="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookID">
  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
