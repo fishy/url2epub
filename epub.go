@@ -47,9 +47,7 @@ var (
  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
   <dc:identifier id="BookID">{{.ID}}</dc:identifier>
   <dc:title>{{.Title}}</dc:title>
-  {{if .Lang -}}
 	<dc:language>{{.Lang}}</dc:language>
-	{{- end}}
   <meta property="dcterms:modified">{{.Time}}</meta>
  </metadata>
  <manifest>
@@ -188,6 +186,9 @@ func Epub(args EpubArgs) (id string, err error) {
 		ArticlePath: epubArticleFilename,
 		NavPath:     epubNavFilename,
 		Images:      imageContentTypes,
+	}
+	if data.Lang == "" {
+		data.Lang = "en"
 	}
 	if err := ziputil.WriteFile(
 		z,
