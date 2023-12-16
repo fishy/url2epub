@@ -178,6 +178,7 @@ func Epub(args EpubArgs) (id string, err error) {
 		}
 	}
 
+	id = randomID.String()
 	data := epubOpfData{
 		ID:          html.EscapeString(id),
 		Title:       html.EscapeString(args.Title),
@@ -202,7 +203,6 @@ func Epub(args EpubArgs) (id string, err error) {
 		return "", err
 	}
 
-	id = randomID.String()
 	if err := ziputil.WriteFile(
 		z,
 		epubOpfFullpath,
