@@ -221,6 +221,8 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	sb.WriteString("?")
 	params := make(neturl.Values)
 	params.Set(queryURL, url)
+	params.Set(queryGray, "1")
+	params.Set(queryPassthroughUserAgent, "1")
 	sb.WriteString(params.Encode())
 	restURL := fmt.Sprintf(epubMsg, sb.String())
 	replyMessage(ctx, w, message, restURL, true, nil)
