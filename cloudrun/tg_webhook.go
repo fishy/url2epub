@@ -116,7 +116,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		slog.WarnContext(ctx, "urlHandler: chat type = 0")
 		fallthrough
 	case AccountTypeRM:
-		uploadRM(ctx, w, message, chat, id, url, title, data)
+		uploadRM(ctx, w, message, chat, url, id, title, data)
 
 	case AccountTypeKindle:
 		sendKindleEmail(ctx, w, message, chat, url, title, data)
