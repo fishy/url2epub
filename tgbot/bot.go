@@ -59,24 +59,23 @@ func (b *Bot) PostRequest(
 	}()
 
 	var req *http.Request
-	req, err = http.NewRequest(
+	req, err = http.NewRequestWithContext(
+		ctx,
 		http.MethodPost,
 		b.getURL(endpoint),
 		strings.NewReader(params.Encode()),
 	)
 	if err != nil {
-		err = fmt.Errorf("failed to construct http request: %w", err)
-		return
+		return 0, fmt.Errorf("tgbot.PostRequest: failed to construct http request: %w", err)
 	}
 	req.Header.Set("Content-Type", postFormContentType)
 	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req.WithContext(ctx))
+	resp, err = http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		defer url2epub.DrainAndClose(resp.Body)
 	}
 	if err != nil {
-		err = fmt.Errorf("%s err: %w", endpoint, err)
-		return
+		return 0, fmt.Errorf("tgbot.PostRequest: endpoint %s err: %w", endpoint, err)
 	}
 	code = resp.StatusCode
 	if resp.StatusCode != http.StatusOK {
@@ -88,7 +87,7 @@ func (b *Bot) PostRequest(
 			buf,
 		)
 	}
-	return
+	return code, err
 }
 
 // SendMessage sents a telegram messsage.
@@ -107,9 +106,8 @@ func (b *Bot) SendMessage(
 	}
 	if markup != nil {
 		var sb strings.Builder
-		err = json.NewEncoder(&sb).Encode(*markup)
-		if err != nil {
-			return
+		if err := json.NewEncoder(&sb).Encode(*markup); err != nil {
+			return 0, fmt.Errorf("tgbot.SendMessage: failed to create InlineKeyboardMarkup: %w", err)
 		}
 		values.Add("reply_markup", sb.String())
 	}
