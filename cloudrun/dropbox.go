@@ -305,3 +305,13 @@ func authDropbox(ctx context.Context, id, secret, refreshToken, code string) (*D
 		RefreshToken: refreshToken,
 	}, nil
 }
+
+var dropboxFilenameCleaner = strings.NewReplacer(
+	// Chars unallowed in filenames for Kobo e-ink readers
+	`:`, "_",
+	`?`, "_",
+	`"`, "_",
+	`\`, "_",
+	`|`, "_",
+	`/`, "_",
+)

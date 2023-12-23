@@ -291,7 +291,7 @@ func uploadDropbox(
 	}(time.Now())
 	ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
 	defer cancel()
-	filename := title + ".epub"
+	filename := dropboxFilenameCleaner.Replace(title) + ".epub"
 	if chat.DropboxFolder != "" {
 		filename = path.Join(chat.DropboxFolder, filename)
 	}
