@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// Node is typedef'd *html.Node with helper functions attached.
+// Node is typedef'd html.Node with helper functions attached.
 type Node html.Node
 
 // FromNode casts *html.Node into *Node.

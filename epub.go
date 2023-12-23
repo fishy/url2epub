@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"go.yhsif.com/url2epub/ziputil"
 )
@@ -116,6 +117,35 @@ type EpubArgs struct {
 	Images map[string]io.Reader
 }
 
+func firstHTMLNode(root *html.Node) *html.Node {
+	if root == nil {
+		return root
+	}
+	if root.Type == html.ElementNode && root.DataAtom == atom.Html {
+		return root
+	}
+	for n := root.FirstChild; n != nil; n = n.NextSibling {
+		if f := firstHTMLNode(n); f != nil {
+			return f
+		}
+	}
+	return nil
+}
+
+func wrapEpubXMLnsNode(root *html.Node) *html.Node {
+	node := firstHTMLNode(root)
+	if node != nil {
+		// add xmlns as the first attr
+		node.Attr = append([]html.Attribute{
+			{
+				Key: "xmlns",
+				Val: "http://www.w3.org/1999/xhtml",
+			},
+		}, node.Attr...)
+	}
+	return root
+}
+
 // Epub creates an Epub 3.0 file from given content.
 func Epub(args EpubArgs) (id string, err error) {
 	randomID, err := uuid.NewRandom()
@@ -146,7 +176,7 @@ func Epub(args EpubArgs) (id string, err error) {
 		ziputil.WriterToWrapper(func(w io.Writer) (int64, error) {
 			// NOTE: this does not return the correct n, but it's good enough for our
 			// use case.
-			return 0, html.Render(w, args.Node)
+			return 0, html.Render(w, wrapEpubXMLnsNode(args.Node))
 		}),
 	); err != nil {
 		return "", err
