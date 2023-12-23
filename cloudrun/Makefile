@@ -10,10 +10,14 @@ image=url2epub
 telegram_token=telegram-token
 twitter_bearer=twitter-bearer
 mailgun_token=mailgun-token
+dropbox_token=dropbox-token
 
 # mailgun related settings
 mailgun_domain=mg.fishy.me
 mailgun_from=url2epub@fishy.me
+
+# dropbox related settings
+dropbox_client_id=rtpgsv6ozwlvxfl
 
 gcloud=$(GCLOUD) --project=$(project)
 docker_image=$(region)-docker.pkg.dev/$(project)/$(image)/$(image)
@@ -35,7 +39,8 @@ deploy:
 		--update-env-vars VERSION_TAG=$(version_tag) \
 		--update-env-vars MAILGUN_DOMAIN=$(mailgun_domain) \
 		--update-env-vars MAILGUN_FROM=$(mailgun_from) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest"
+		--update-env-vars DROPBOX_CLIENT_ID=$(dropbox_client_id) \
+		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"
 	rm -Rf vendor
 
 .PHONY: update-secrets

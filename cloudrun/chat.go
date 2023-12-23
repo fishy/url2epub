@@ -20,6 +20,7 @@ const (
 	_ AccountType = iota
 	AccountTypeRM
 	AccountTypeKindle
+	AccountTypeDropbox
 )
 
 func (at AccountType) String() string {
@@ -30,6 +31,8 @@ func (at AccountType) String() string {
 		return "rm"
 	case AccountTypeKindle:
 		return "kindle"
+	case AccountTypeDropbox:
+		return "dropbox"
 	}
 }
 
@@ -41,6 +44,8 @@ func (at AccountType) MarshalText() ([]byte, error) {
 	case AccountTypeRM:
 		fallthrough
 	case AccountTypeKindle:
+		fallthrough
+	case AccountTypeDropbox:
 		return []byte(at.String()), nil
 	}
 }
@@ -58,6 +63,9 @@ func (at *AccountType) UnmarshalText(text []byte) error {
 
 	case "kindle":
 		*at = AccountTypeKindle
+
+	case "dropbox":
+		*at = AccountTypeDropbox
 	}
 	return nil
 }
@@ -74,6 +82,10 @@ type EntityChatToken struct {
 
 	// kindle related fields
 	KindleEmail string `datastore:"email" json:"email"`
+
+	// dropbox related fields
+	DropboxToken  string `datastore:"dropbox_token" json:"dropbox_token"`
+	DropboxFolder string `datastore:"dropbox_folder" json:"dropbox_folder"`
 }
 
 func (e *EntityChatToken) getKey() string {

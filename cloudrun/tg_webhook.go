@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	neturl "net/url"
+	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -37,26 +39,39 @@ By default all epubs are sent to your root directory. To set a different one, us
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
 	startSuccessKindle = `✅ Successfully saved your kindle email! Please remember that you need to add "%s" to your "Approved Personal Document E-mail List".`
 
-	notStartedMsg = `🚫 You had not run ` + startCommand + ` command yet.`
+	startExplainDropbox = `ℹ️
+
+To link your dropbox account, go to %s to grant access, then copy the code at the final step, and come back to type "` + startCommand + ` dropbox <code>".`
+	startSuccessDropbox = `✅ Successfully linked your Dropbox account!
+By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).`
+
+	dropboxAuthURL     = "https://www.dropbox.com/oauth2/authorize?client_id=%s&token_access_type=offline&response_type=code"
+	dropboxAuthExplain = `Please go to %s, copy the code at the end, and come back with "` + startCommand + ` dropbox <code>"`
+	dropboxFailure     = `🚫 Failed to auth with dropbox.`
+
+	notStartedMsg = `🚫 You had not run ` + startCommand + ` command successfully yet.`
 
 	stopMsg = `✅ Successfully deleted your reMarkable token or Kindle email.
 You can now go to https://my.remarkable.com/device/desktop to revoke access if it was reMarkable token.`
 
-	dirMsg        = `You are currently saving to "%s", please choose a new directory to save to:`
-	dirErrMsg     = `🚫 Failed to list directories. Please try again later.`
-	dirSaveErr    = `🚫 Failed to save this directory. Please try again later.`
-	dirOldErr     = `🚫 Failed to save this directory. Please try ` + dirCommand + ` command again later.`
-	dirSuccess    = `✅ Saved!`
-	dirSuccessMsg = `✅ Your new directory "%s" is saved.`
+	dirMsg          = `You are currently saving to "%s", please choose a new directory to save to:`
+	dirErrMsg       = `🚫 Failed to list directories. Please try again later.`
+	dirSaveErr      = `🚫 Failed to save this directory. Please try again later.`
+	dirOldErr       = `🚫 Failed to save this directory. Please try ` + dirCommand + ` command again later.`
+	dirSuccess      = `✅ Saved!`
+	dirSuccessMsg   = `✅ Your new directory "%s" is saved.`
+	dirWrongAccount = dirCommand + ` is not supported by your account.`
 
-	noURLmsg          = `🚫 No URL found in message.`
-	unsupportedURLmsg = `⚠️ Unsupported URL: "%s"`
-	failedEpubMsg     = `🚫 Failed to generate epub from URL: "%s"`
-	failedUpload      = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
-	failedEmail       = `🚫 Failed to email epub to your kindle device for URL: "%s"`
-	successUpload     = `✅ Uploaded "%s.epub" (%s) to your reMarkable account from URL: "%s"`
-	successEmail      = `✅ Sent "%s.epub" (%s) to your kindle device from URL: "%s"`
-	epubMsg           = "ℹ️ Download your epub file here: %s"
+	noURLmsg             = `🚫 No URL found in message.`
+	unsupportedURLmsg    = `⚠️ Unsupported URL: "%s"`
+	failedEpubMsg        = `🚫 Failed to generate epub from URL: "%s"`
+	failedUploadRM       = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
+	failedUploadDropbox  = `🚫 Failed to upload epub to your Dropbox account for URL: "%s"`
+	failedEmail          = `🚫 Failed to email epub to your kindle device for URL: "%s"`
+	successUploadRM      = `✅ Uploaded "%s.epub" (%s) to your reMarkable account from URL: "%s"`
+	successUploadDropbox = `✅ Uploaded "%s" (%s) to your Dropbox account from URL: "%s"`
+	successEmail         = `✅ Sent "%s.epub" (%s) to your kindle device from URL: "%s"`
+	epubMsg              = "ℹ️ Download your epub file here: %s"
 )
 
 func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
@@ -117,6 +132,9 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		fallthrough
 	case AccountTypeRM:
 		uploadRM(ctx, w, message, chat, url, id, title, data)
+
+	case AccountTypeDropbox:
+		uploadDropbox(ctx, w, message, chat, url, id, title, data)
 
 	case AccountTypeKindle:
 		sendKindleEmail(ctx, w, message, chat, url, title, data)
@@ -200,10 +218,94 @@ func uploadRM(
 			"uploadRM: Upload failed",
 			"err", err,
 		)
-		replyMessage(ctx, w, message, fmt.Sprintf(failedUpload, url), true, nil)
+		replyMessage(ctx, w, message, fmt.Sprintf(failedUploadRM, url), true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(successUpload, title, prettySize(size), url), true, nil)
+	replyMessage(ctx, w, message, fmt.Sprintf(successUploadRM, title, prettySize(size), url), true, nil)
+}
+
+func handleDropboxAuthError(
+	ctx context.Context,
+	w http.ResponseWriter,
+	message *tgbot.Message,
+	clientID string,
+) func(*DropboxClient, error) *DropboxClient {
+	return func(client *DropboxClient, err error) *DropboxClient {
+		if err != nil {
+			slog.ErrorContext(ctx, "dropbox auth failed", "err", err)
+
+			var sb strings.Builder
+			sb.WriteString(dropboxFailure)
+			var dae DropboxAPIError
+			if errors.As(err, &dae) {
+				sb.WriteString(fmt.Sprintf(" This error detail might be helpful: %q.", dae.Summary))
+				if dae.Tag == "invalid_grant" {
+					sb.WriteString(" ")
+					sb.WriteString(fmt.Sprintf(dropboxAuthExplain, fmt.Sprintf(dropboxAuthURL, clientID)))
+				}
+			}
+			replyMessage(ctx, w, message, sb.String(), true, nil)
+			return nil
+		}
+		return client
+	}
+}
+
+func dropboxClientFromChat(
+	ctx context.Context,
+	w http.ResponseWriter,
+	message *tgbot.Message,
+	chat *EntityChatToken,
+) *DropboxClient {
+	clientID := os.Getenv("DROPBOX_CLIENT_ID")
+	clientSecret := os.Getenv("SECRET_DROPBOX_TOKEN")
+
+	return handleDropboxAuthError(ctx, w, message, clientID)(authDropboxRefresh(ctx, clientID, clientSecret, chat.DropboxToken))
+}
+
+func uploadDropbox(
+	ctx context.Context,
+	w http.ResponseWriter,
+	message *tgbot.Message,
+	chat *EntityChatToken,
+	url, id, title string,
+	data *bytes.Buffer,
+) {
+	client := dropboxClientFromChat(ctx, w, message, chat)
+	if client == nil {
+		// error message already replied
+		return
+	}
+	var err error
+	size := data.Len()
+	defer func(start time.Time) {
+		slog.InfoContext(
+			ctx,
+			"uploadDropbox: Finished",
+			"took", time.Since(start),
+			"epubSize", size,
+			"id", id,
+			"title", title,
+			"err", err,
+		)
+	}(time.Now())
+	ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
+	defer cancel()
+	filename := title + ".epub"
+	if chat.DropboxFolder != "" {
+		filename = path.Join(chat.DropboxFolder, filename)
+	}
+	err = client.Upload(ctx, filename, data)
+	if err != nil {
+		slog.ErrorContext(
+			ctx,
+			"uploadDropbox: Upload failed",
+			"err", err,
+		)
+		replyMessage(ctx, w, message, fmt.Sprintf(failedUploadDropbox, url), true, nil)
+		return
+	}
+	replyMessage(ctx, w, message, fmt.Sprintf(successUploadDropbox, filename, prettySize(size), url), true, nil)
 }
 
 func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
@@ -244,8 +346,9 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		return
 	}
 	const (
-		rmPrefix     = "rm "
-		kindlePrefix = "kindle "
+		rmPrefix      = "rm "
+		kindlePrefix  = "kindle "
+		dropboxPrefix = "dropbox"
 	)
 	if strings.HasPrefix(strings.ToLower(payload), rmPrefix) {
 		startRM(ctx, w, message, payload[len(rmPrefix):])
@@ -253,6 +356,10 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 	}
 	if strings.HasPrefix(strings.ToLower(payload), kindlePrefix) {
 		startKindle(ctx, w, message, payload[len(kindlePrefix):])
+		return
+	}
+	if strings.HasPrefix(strings.ToLower(payload), dropboxPrefix) {
+		startDropbox(ctx, w, message, payload[len(dropboxPrefix):])
 		return
 	}
 	replyMessage(ctx, w, message, fmt.Sprintf(
@@ -322,7 +429,7 @@ func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
-			"startHandler: Unable to save chat",
+			"startRM: Unable to save chat",
 			"err", err,
 		)
 		replyMessage(ctx, w, message, startSaveErr, true, nil)
@@ -332,6 +439,40 @@ func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 		startSuccessKindle,
 		mgFrom(),
 	), true, nil)
+}
+
+func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, payload string) {
+	dropboxClientID := os.Getenv("DROPBOX_CLIENT_ID")
+	dropboxSecret := os.Getenv("SECRET_DROPBOX_TOKEN")
+
+	code := strings.TrimSpace(payload)
+	if code == "" {
+		replyMessage(ctx, w, message, fmt.Sprintf(
+			startExplainDropbox,
+			fmt.Sprintf(dropboxAuthURL, dropboxClientID),
+		), true, nil)
+		return
+	}
+	client := handleDropboxAuthError(ctx, w, message, dropboxClientID)(authDropboxCode(ctx, dropboxClientID, dropboxSecret, code))
+	if client == nil {
+		// error already handled
+		return
+	}
+	chat := &EntityChatToken{
+		Chat:         message.Chat.ID,
+		Type:         AccountTypeDropbox,
+		DropboxToken: client.RefreshToken,
+	}
+	if err := chat.Save(ctx); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"startDropbox: Unable to save chat",
+			"err", err,
+		)
+		replyMessage(ctx, w, message, startSaveErr, true, nil)
+		return
+	}
+	replyMessage(ctx, w, message, startSuccessDropbox, true, nil)
 }
 
 func stopHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
@@ -350,6 +491,23 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
 	}
+	switch chat.Type {
+	default:
+		replyMessage(ctx, w, message, dirWrongAccount, true, nil)
+
+	case 0:
+		// Should not happen, but just in case
+		slog.WarnContext(ctx, "dirHandler: chat type = 0")
+		fallthrough
+	case AccountTypeRM:
+		dirRM(ctx, w, chat, message)
+
+	case AccountTypeDropbox:
+		dirDropbox(ctx, w, chat, message)
+	}
+}
+
+func dirRM(ctx context.Context, w http.ResponseWriter, chat *EntityChatToken, message *tgbot.Message) {
 	client := &rmapi.Client{
 		RefreshToken: chat.RMToken,
 	}
@@ -357,7 +515,7 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
-			"dirHandler: ListDirs failed",
+			"dirRM: ListDirs failed",
 			"err", err,
 		)
 		replyMessage(ctx, w, message, dirErrMsg, true, nil)
@@ -387,11 +545,51 @@ func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	)
 }
 
-func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
+func dirDropbox(ctx context.Context, w http.ResponseWriter, chat *EntityChatToken, message *tgbot.Message) {
+	client := dropboxClientFromChat(ctx, w, message, chat)
+	if client == nil {
+		// error message already replied
+		return
+	}
+	dirs, err := client.ListDirs(ctx)
+	if err != nil {
+		slog.ErrorContext(
+			ctx,
+			"dirDropbox: ListDirs failed",
+			"err", err,
+		)
+		replyMessage(ctx, w, message, dirErrMsg, true, nil)
+		return
+	}
+	choices := make([][]tgbot.InlineKeyboardButton, 0, len(dirs))
+	for _, dir := range dirs {
+		choices = append(choices, []tgbot.InlineKeyboardButton{
+			{
+				Text: dir.Display,
+				Data: dropboxDirPrefix + dir.Display,
+			},
+		})
+	}
+	sort.Slice(choices, func(i, j int) bool {
+		return choices[i][0].Text < choices[j][0].Text
+	})
+	replyMessage(
+		ctx,
+		w,
+		message,
+		fmt.Sprintf(dirMsg, chat.DropboxFolder),
+		true,
+		&tgbot.InlineKeyboardMarkup{
+			InlineKeyboard: choices,
+		},
+	)
+}
+
+func dirRMCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
 	if callback.Message == nil {
 		slog.ErrorContext(
 			ctx,
-			"dirCallbackHandler: Bad callback",
+			"dirRMCallbackHandler: Bad callback",
 			"data", data,
 			"callback", callback,
 		)
@@ -403,7 +601,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	if chat == nil {
 		slog.ErrorContext(
 			ctx,
-			"dirCallbackHandler: Bad callback",
+			"dirRMCallbackHandler: Bad callback",
 			"data", data,
 			"chat", callback.Message.Chat.ID,
 		)
@@ -415,7 +613,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
-			"dirCallbackHandler: Unable to save chat",
+			"dirRMCallbackHandler: Unable to save chat",
 			"err", err,
 		)
 		getBot().ReplyCallback(ctx, callback.ID, dirSaveErr)
@@ -425,7 +623,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
 		slog.ErrorContext(
 			ctx,
-			"dirCallbackHandler: Unable to reply to callback",
+			"dirRMCallbackHandler: Unable to reply to callback",
 			"err", err,
 		)
 	}
@@ -438,7 +636,7 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
-			"dirCallbackHandler: Unable to list dir",
+			"dirRMCallbackHandler: Unable to list dir",
 			"err", err,
 		)
 		return
@@ -447,6 +645,60 @@ func dirCallbackHandler(ctx context.Context, w http.ResponseWriter, data string,
 		ctx,
 		callback.Message.Chat.ID,
 		fmt.Sprintf(dirSuccessMsg, dirs[chat.GetParentID()]),
+		&callback.Message.ID,
+		nil,
+	)
+}
+
+func dirDropboxCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
+	if callback.Message == nil {
+		slog.ErrorContext(
+			ctx,
+			"dirDropboxCallbackHandler: Bad callback",
+			"data", data,
+			"callback", callback,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, dirOldErr)
+		reply200(w)
+		return
+	}
+	chat := GetChat(ctx, callback.Message.Chat.ID)
+	if chat == nil {
+		slog.ErrorContext(
+			ctx,
+			"dirDropboxCallbackHandler: Bad callback",
+			"data", data,
+			"chat", callback.Message.Chat.ID,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, notStartedMsg)
+		reply200(w)
+		return
+	}
+	dir := strings.TrimPrefix(data, dropboxDirPrefix)
+	chat.DropboxFolder = dir
+	if err := chat.Save(ctx); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"dirDropboxCallbackHandler: Unable to save chat",
+			"err", err,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, dirSaveErr)
+		reply200(w)
+		return
+	}
+	if _, err := getBot().ReplyCallback(ctx, callback.ID, dirSuccess); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"dirDropboxCallbackHandler: Unable to reply to callback",
+			"err", err,
+		)
+	}
+	reply200(w)
+
+	getBot().SendMessage(
+		ctx,
+		callback.Message.Chat.ID,
+		fmt.Sprintf(dirSuccessMsg, dir),
 		&callback.Message.ID,
 		nil,
 	)

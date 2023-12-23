@@ -42,6 +42,8 @@ const (
 	dirIDPrefix = `dir:`
 	fontPrefix  = `font:`
 
+	dropboxDirPrefix = `dbdir:`
+
 	restDocURL = `https://github.com/fishy/url2epub/blob/main/REST.md`
 
 	userAgentTemplate = "url2epub/%s"
@@ -160,9 +162,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			reply200(w)
 
 		case strings.HasPrefix(data, dirIDPrefix):
-			dirCallbackHandler(ctx, w, data, callback)
+			dirRMCallbackHandler(ctx, w, data, callback)
 		case strings.HasPrefix(data, fontPrefix):
 			fontCallbackHandler(ctx, w, data, callback)
+
+		case strings.HasPrefix(data, dropboxDirPrefix):
+			dirDropboxCallbackHandler(ctx, w, data, callback)
 		}
 		return
 	}
