@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -72,8 +73,9 @@ func (at *AccountType) UnmarshalText(text []byte) error {
 
 // EntityChatToken is the entity rmapi token for a chat stored in datastore.
 type EntityChatToken struct {
-	Chat int64       `datastore:"chat" json:"chat"`
-	Type AccountType `datastore:"type" json:"type"`
+	Chat     int64       `datastore:"chat" json:"chat"`
+	Type     AccountType `datastore:"type" json:"type"`
+	FitImage int         `datastore:"fit_image" json:"fit_image"`
 
 	// reMarkable related fields
 	RMToken    string `datastore:"token" json:"token"`
@@ -138,12 +140,14 @@ func GetChat(ctx context.Context, id int64) *EntityChatToken {
 	}
 	key := e.datastoreKey()
 	if err := dsClient.Get(ctx, key, e); err != nil {
-		slog.ErrorContext(
-			ctx,
-			"Failed to get datastore key",
-			"err", err,
-			"key", key,
-		)
+		if !errors.Is(err, datastore.ErrNoSuchEntity) {
+			slog.ErrorContext(
+				ctx,
+				"Failed to get datastore key",
+				"err", err,
+				"key", key,
+			)
+		}
 		return nil
 	}
 	return e

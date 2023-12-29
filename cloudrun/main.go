@@ -36,6 +36,7 @@ const (
 	dirCommand   = `/dir`
 	fontCommand  = `/font`
 	epubCommand  = `/epub`
+	fitCommand   = `/fit`
 
 	unknownCallback = `🚫 Unknown callback`
 
@@ -184,6 +185,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		urlHandler(ctx, w, update.Message)
 	case strings.HasPrefix(text, startCommand):
 		startHandler(ctx, w, update.Message, text)
+	case strings.HasPrefix(text, fitCommand):
+		fitHandler(ctx, w, update.Message, text)
 	case strings.HasPrefix(text, epubCommand):
 		epubHandler(ctx, w, update.Message)
 	case text == stopCommand:

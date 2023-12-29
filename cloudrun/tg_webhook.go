@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf16"
@@ -29,14 +30,21 @@ import (
 const (
 	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/device/desktop/connect.`
 	startSaveErr = `🚫 Failed to save this registration. Please try again later.`
+
 	startExplain = `ℹ️
 
-To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".
+Please add one of "rm" (for reMarkable account), "kindle" (for kindle and other emails), or "dropbox" (for Dropbox account) after "` + startCommand + ` " and follow instructions there.`
 
-To link your kindle device (experimental), type "` + startCommand + ` kindle <send-to-kindle-email>". You need to add "%s" to your "Approved Personal Document E-mail List".`
+	startExplainRM = `ℹ️
+
+To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".`
 	startSuccessRM = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/device/desktop).
 By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
+
+	startExplainKindle = `ℹ️
+
+To link your kindle device (experimental), type "` + startCommand + ` kindle <send-to-kindle-email>". You need to add "%s" to your "Approved Personal Document E-mail List".`
 	startSuccessKindle = `✅ Successfully saved your kindle email! Please remember that you need to add "%s" to your "Approved Personal Document E-mail List".`
 
 	startExplainDropbox = `ℹ️
@@ -72,6 +80,16 @@ You can now go to https://my.remarkable.com/device/desktop to revoke access if i
 	successUploadDropbox = `✅ Uploaded "%s" (%s) to your Dropbox account from URL: "%s"`
 	successEmail         = `✅ Sent "%s.epub" (%s) to your kindle device from URL: "%s"`
 	epubMsg              = "ℹ️ Download your epub file here: %s"
+
+	fitExplain = `ℹ️
+
+Use "` + fitCommand + ` <number>" to auto fit images in the epub file to maximum size of <number>x<number>.
+
+For example, "` + fitCommand + ` 200" will auto downscale 1024x768 image to 200x150, or 768x1024 image to 150x200, but leave 150x150 image intact.
+
+Use "` + fitCommand + ` clear" to remove fit preference and leave big images intact.`
+	fitSaveErr = `🚫 Failed to save fit preference. Please try again later.`
+	fitSaved   = `✅ Your new fit preference is saved: %d (0 means no downscaling)`
 )
 
 func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
@@ -107,7 +125,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
-	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true)
+	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true, chat.FitImage)
 	if err != nil {
 		if errors.Is(err, errUnsupportedURL) {
 			replyMessage(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
@@ -339,10 +357,7 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
 	payload := strings.TrimSpace(strings.TrimPrefix(text, startCommand))
 	if payload == "" {
-		replyMessage(ctx, w, message, fmt.Sprintf(
-			startExplain,
-			mgFrom(),
-		), true, nil)
+		replyMessage(ctx, w, message, startExplain, true, nil)
 		return
 	}
 	const (
@@ -362,19 +377,13 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		startDropbox(ctx, w, message, payload[len(dropboxPrefix):])
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(
-		startExplain,
-		mgFrom(),
-	), true, nil)
+	replyMessage(ctx, w, message, startExplain, true, nil)
 }
 
 func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, payload string) {
 	token := strings.TrimSpace(payload)
 	if token == "" {
-		replyMessage(ctx, w, message, fmt.Sprintf(
-			startExplain,
-			mgFrom(),
-		), true, nil)
+		replyMessage(ctx, w, message, startExplainRM, true, nil)
 		return
 	}
 	client, err := rmapi.Register(ctx, rmapi.RegisterArgs{
@@ -393,11 +402,14 @@ func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message,
 		), true, nil)
 		return
 	}
-	chat := &EntityChatToken{
-		Chat:    message.Chat.ID,
-		Type:    AccountTypeRM,
-		RMToken: client.RefreshToken,
+	chat := GetChat(ctx, message.Chat.ID)
+	if chat == nil {
+		chat = &EntityChatToken{
+			Chat: message.Chat.ID,
+		}
 	}
+	chat.Type = AccountTypeRM
+	chat.RMToken = client.RefreshToken
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -416,16 +428,19 @@ func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	email := strings.TrimSpace(payload)
 	if email == "" {
 		replyMessage(ctx, w, message, fmt.Sprintf(
-			startExplain,
+			startExplainKindle,
 			mgFrom(),
 		), true, nil)
 		return
 	}
-	chat := &EntityChatToken{
-		Chat:        message.Chat.ID,
-		Type:        AccountTypeKindle,
-		KindleEmail: email,
+	chat := GetChat(ctx, message.Chat.ID)
+	if chat == nil {
+		chat = &EntityChatToken{
+			Chat: message.Chat.ID,
+		}
 	}
+	chat.Type = AccountTypeKindle
+	chat.KindleEmail = email
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -458,11 +473,14 @@ func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		// error already handled
 		return
 	}
-	chat := &EntityChatToken{
-		Chat:         message.Chat.ID,
-		Type:         AccountTypeDropbox,
-		DropboxToken: client.RefreshToken,
+	chat := GetChat(ctx, message.Chat.ID)
+	if chat == nil {
+		chat = &EntityChatToken{
+			Chat: message.Chat.ID,
+		}
 	}
+	chat.Type = AccountTypeDropbox
+	chat.DropboxToken = client.RefreshToken
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -702,6 +720,48 @@ func dirDropboxCallbackHandler(ctx context.Context, w http.ResponseWriter, data 
 		&callback.Message.ID,
 		nil,
 	)
+}
+
+func fitHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
+	payload := strings.TrimSpace(strings.TrimPrefix(text, fitCommand))
+	if payload == "" {
+		replyMessage(ctx, w, message, fitExplain, true, nil)
+		return
+	}
+	chat := GetChat(ctx, message.Chat.ID)
+	if chat == nil {
+		replyMessage(ctx, w, message, notStartedMsg, true, nil)
+		return
+	}
+	if payload == "clear" {
+		chat.FitImage = 0
+	} else {
+		fit, err := strconv.ParseInt(payload, 10, 64)
+		if err != nil {
+			slog.ErrorContext(
+				ctx,
+				"fitHandler: Invalid payload",
+				"err", err,
+				"payload", text,
+			)
+			replyMessage(ctx, w, message, fitExplain, true, nil)
+			return
+		}
+		chat.FitImage = int(fit)
+	}
+	if err := chat.Save(ctx); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"fitHandler: Unable to save chat",
+			"err", err,
+		)
+		replyMessage(ctx, w, message, fitSaveErr, true, nil)
+		return
+	}
+	replyMessage(ctx, w, message, fmt.Sprintf(
+		fitSaved,
+		chat.FitImage,
+	), true, nil)
 }
 
 func reply200(w http.ResponseWriter) {

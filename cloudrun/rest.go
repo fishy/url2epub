@@ -17,6 +17,7 @@ import (
 const (
 	queryURL                  = "url"
 	queryGray                 = "gray"
+	queryFit                  = "fit"
 	queryPassthroughUserAgent = "passthrough-user-agent"
 )
 
@@ -25,12 +26,14 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := r.FormValue(queryURL)
 	gray, _ := strconv.ParseBool(r.FormValue(queryGray))
+	fit64, _ := strconv.ParseInt(r.FormValue(queryFit), 10, 64)
+	fit := int(fit64)
 	passthroughUA, _ := strconv.ParseBool(r.FormValue(queryPassthroughUserAgent))
 	userAgent := defaultUserAgent
 	if passthroughUA {
 		userAgent = r.Header.Get("user-agent")
 	}
-	_, title, data, err := getEpub(ctx, url, userAgent, gray)
+	_, title, data, err := getEpub(ctx, url, userAgent, gray, fit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -46,7 +49,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 
 var errUnsupportedURL = errors.New("unsupported URL")
 
-func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title string, data *bytes.Buffer, err error) {
+func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id, title string, data *bytes.Buffer, err error) {
 	if ua == "" {
 		ua = defaultUserAgent
 	}
@@ -125,6 +128,7 @@ func getEpub(ctx context.Context, url string, ua string, gray bool) (id, title s
 		BaseURL:   baseURL,
 		ImagesDir: "images",
 		Grayscale: gray,
+		FitImage:  fit,
 	})
 	if err != nil {
 		return "", "", nil, fmt.Errorf(

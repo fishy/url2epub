@@ -153,6 +153,10 @@ type ReadableArgs struct {
 	// If Grayscale is set to true,
 	// all images will be grayscaled and encoded as jpegs.
 	Grayscale bool
+
+	// Downscale images to fit in NxN,
+	// only used when Grayscale is set to true.
+	FitImage int
 }
 
 // Readable strips node n into a readable one, with all images downloaded and
@@ -173,6 +177,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		imgMapping,
 		&counter,
 		args.Grayscale,
+		args.FitImage,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -231,6 +236,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 		imgMapping,
 		&counter,
 		args.Grayscale,
+		args.FitImage,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -246,6 +252,7 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 			imgMapping,
 			&counter,
 			args.Grayscale,
+			args.FitImage,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -363,6 +370,7 @@ func (n *Node) readableRecursive(
 	imgMapping map[string]string,
 	imgCounter *int,
 	gray bool,
+	fitImage int,
 ) (*html.Node, error) {
 	if n == nil {
 		return nil, nil
@@ -475,7 +483,7 @@ func (n *Node) readableRecursive(
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					downloadImage(ctx, srcURL, userAgent, reader, gray)
+					downloadImage(ctx, srcURL, userAgent, reader, gray, fitImage)
 				}()
 			}
 			// Remove srcset if they are there
@@ -495,7 +503,7 @@ func (n *Node) readableRecursive(
 		}
 		var iterationErr error
 		n.ForEachChild(func(c *Node) bool {
-			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter, gray)
+			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter, gray, fitImage)
 			if err != nil {
 				iterationErr = err
 				return false
@@ -517,7 +525,7 @@ func (n *Node) readableRecursive(
 	}
 }
 
-func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader, gray bool) {
+func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io.Reader, gray bool, fitImage int) {
 	body, _, err := get(ctx, src, userAgent)
 	if err != nil {
 		slog.ErrorContext(
@@ -546,7 +554,7 @@ func downloadImage(ctx context.Context, src *url.URL, userAgent string, dest *io
 		*dest = orig
 		return
 	}
-	reader, err := img.ToJPEG()
+	reader, err := grayscale.ToJPEG(grayscale.Downscale(img, fitImage))
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
