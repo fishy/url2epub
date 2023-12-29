@@ -54,14 +54,11 @@ var atoms = map[atom.Atom]immutable.Set[string]{
 		imgSrc,
 		imgSrcset,
 		"alt",
-		"width",
-		"height",
+		// Do not keep width and height here as we might downscale it
 	),
 	atom.Source: immutable.SetLiteral(
 		imgSrc,
 		imgSrcset,
-		"width",
-		"height",
 		"type",
 	),
 

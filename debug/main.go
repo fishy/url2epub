@@ -42,6 +42,11 @@ var (
 		false,
 		"Grayscale images.",
 	)
+	fit = flag.Int(
+		"fit",
+		0,
+		"Downscale images to fit",
+	)
 	bearer = flag.String(
 		"bearer",
 		"",
@@ -119,6 +124,7 @@ func main() {
 			ImagesDir: "images",
 			UserAgent: *ua,
 			Grayscale: *grayscale,
+			FitImage:  *fit,
 		})
 		if err != nil {
 			slog.Error("url2epub.Readable failed", "err", err)
