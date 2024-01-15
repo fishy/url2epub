@@ -154,6 +154,15 @@ type ReadableArgs struct {
 	// Downscale images to fit in NxN,
 	// only used when Grayscale is set to true.
 	FitImage int
+
+	// Set the minimal number of readable nodes under the first article node to
+	// use that instead of body.
+	//
+	// If the first article node has too few nodes under it, we'll skip using it
+	// and use the body node instead.
+	//
+	// <=0 to disable this check (always use first article node if found).
+	MinArticleNodes int
 }
 
 // Readable strips node n into a readable one, with all images downloaded and
@@ -223,7 +232,15 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 	}
 
 	var body *html.Node
-	article, err := n.FindFirstAtomNode(atom.Article).readableRecursive(
+	articleNode := n.FindFirstAtomNode(atom.Article)
+	if articleNode != nil && args.MinArticleNodes > 0 {
+		count, hasMin := articleNode.countRecursive(args.MinArticleNodes)
+		slog.DebugContext(ctx, "found article node", "nodes", count, "min", args.MinArticleNodes, "hasMin", hasMin)
+		if !hasMin {
+			articleNode = nil
+		}
+	}
+	article, err := articleNode.readableRecursive(
 		ctx,
 		&wg,
 		args.BaseURL,
@@ -355,6 +372,56 @@ func findSrcURLFromIMGNode(
 		return nil
 	}
 	return tryParseImgSrcset(node.Attr[srcsetIndex].Val)
+}
+
+func (n *Node) countRecursive(minCount int) (count int, hasMin bool) {
+	if n == nil {
+		return 0, false
+	}
+	node := n.AsNode()
+	switch node.Type {
+	default:
+		return 0, false
+
+	case html.TextNode:
+		if strings.TrimSpace(node.Data) == "" {
+			// This text node is all white space, skipping.
+			return 0, false
+		}
+		if minCount <= 1 {
+			return 0, true
+		}
+		return 1, false
+
+	case html.ElementNode:
+		if _, ok := atoms[node.DataAtom]; !ok {
+			// Not an atom we want to keep.
+			return 0, false
+		}
+		count += 1
+		minCount -= 1
+		if minCount <= 0 {
+			return 0, true
+		}
+		n.ForEachChild(func(c *Node) bool {
+			subCount, hit := c.countRecursive(minCount)
+			if hit {
+				hasMin = hit
+				return false
+			}
+			count += subCount
+			minCount -= subCount
+			if minCount <= 0 {
+				hasMin = hit
+				return false
+			}
+			return true
+		})
+		if hasMin {
+			return 0, true
+		}
+		return count, false
+	}
 }
 
 func (n *Node) readableRecursive(

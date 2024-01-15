@@ -21,6 +21,8 @@ const (
 	queryPassthroughUserAgent = "passthrough-user-agent"
 )
 
+const minArticleNodes = 20
+
 func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := logContext(r)
 
@@ -125,10 +127,11 @@ func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id
 		)
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
-		BaseURL:   baseURL,
-		ImagesDir: "images",
-		Grayscale: gray,
-		FitImage:  fit,
+		BaseURL:         baseURL,
+		ImagesDir:       "images",
+		Grayscale:       gray,
+		FitImage:        fit,
+		MinArticleNodes: minArticleNodes,
 	})
 	if err != nil {
 		return "", "", nil, fmt.Errorf(

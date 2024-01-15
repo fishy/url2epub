@@ -47,6 +47,11 @@ var (
 		0,
 		"Downscale images to fit",
 	)
+	minArticleNodes = flag.Int(
+		"min-article-nodes",
+		0,
+		"Minimal nodes to use article node",
+	)
 	bearer = flag.String(
 		"bearer",
 		"",
@@ -120,11 +125,12 @@ func main() {
 		}
 
 		node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
-			BaseURL:   baseURL,
-			ImagesDir: "images",
-			UserAgent: *ua,
-			Grayscale: *grayscale,
-			FitImage:  *fit,
+			BaseURL:         baseURL,
+			ImagesDir:       "images",
+			UserAgent:       *ua,
+			Grayscale:       *grayscale,
+			FitImage:        *fit,
+			MinArticleNodes: *minArticleNodes,
 		})
 		if err != nil {
 			slog.Error("url2epub.Readable failed", "err", err)
