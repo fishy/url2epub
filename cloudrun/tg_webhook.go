@@ -73,6 +73,7 @@ You can now go to https://my.remarkable.com/device/desktop to revoke access if i
 	noURLmsg             = `🚫 No URL found in message.`
 	unsupportedURLmsg    = `⚠️ Unsupported URL: "%s"`
 	failedEpubMsg        = `🚫 Failed to generate epub from URL: "%s"`
+	failedEpubRetry      = `, will retry with archive.is.`
 	failedUploadRM       = `🚫 Failed to upload epub to your reMarkable account for URL: "%s"`
 	failedUploadDropbox  = `🚫 Failed to upload epub to your Dropbox account for URL: "%s"`
 	failedEmail          = `🚫 Failed to email epub to your kindle device for URL: "%s"`
@@ -131,13 +132,18 @@ func handleURL(
 	if !first {
 		reply = sendReplyMessage
 	}
+	start := time.Now()
 	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true, chat.FitImage)
+	if !first {
+		slog.DebugContext(ctx, "Retried with archive.is", "err", err, "url", url, "took", time.Since(start))
+	}
 	if err != nil {
 		if errors.Is(err, errUnsupportedURL) {
 			reply(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
 		} else {
-			reply(ctx, w, message, fmt.Sprintf(failedEpubMsg, url), true, nil)
+			msg := fmt.Sprintf(failedEpubMsg, url)
 			if first && !strings.HasPrefix(url, archivePrefix) {
+				msg += failedEpubRetry
 				go func() {
 					ctx := context.WithoutCancel(ctx)
 					newURL := archiveNewest + url
@@ -145,6 +151,7 @@ func handleURL(
 					handleURL(ctx, nil /* ResponseWriter */, message, chat, newURL, false /* first */)
 				}()
 			}
+			reply(ctx, w, message, msg, true, nil)
 		}
 		return
 	}
