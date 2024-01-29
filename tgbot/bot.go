@@ -1,6 +1,7 @@
 package tgbot
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha512"
 	"encoding/base64"
@@ -21,7 +22,24 @@ import (
 const (
 	urlPrefix           = "https://api.telegram.org/bot"
 	postFormContentType = "application/x-www-form-urlencoded"
+	jsonContentType     = "application/json"
 )
+
+var bufPool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
+
+func getBufFromPool() *bytes.Buffer {
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	return buf
+}
+
+func returnBufToPool(buf *bytes.Buffer) {
+	bufPool.Put(buf)
+}
 
 // Bot defines a telegram b with token.
 type Bot struct {
@@ -43,10 +61,11 @@ func (b *Bot) getURL(endpoint string) string {
 }
 
 // PostRequest use POST method to send a request to telegram
-func (b *Bot) PostRequest(
+func (b *Bot) postRequest(
 	ctx context.Context,
 	endpoint string,
-	params url.Values,
+	body io.Reader,
+	contentType string,
 ) (code int, err error) {
 	start := time.Now()
 	defer func() {
@@ -63,12 +82,12 @@ func (b *Bot) PostRequest(
 		ctx,
 		http.MethodPost,
 		b.getURL(endpoint),
-		strings.NewReader(params.Encode()),
+		body,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("tgbot.PostRequest: failed to construct http request: %w", err)
 	}
-	req.Header.Set("Content-Type", postFormContentType)
+	req.Header.Set("Content-Type", contentType)
 	var resp *http.Response
 	resp, err = http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
@@ -88,6 +107,29 @@ func (b *Bot) PostRequest(
 		)
 	}
 	return code, err
+}
+
+// PostRequest use POST method to send a request to telegram
+func (b *Bot) PostRequest(
+	ctx context.Context,
+	endpoint string,
+	params url.Values,
+) (code int, err error) {
+	return b.postRequest(ctx, endpoint, strings.NewReader(params.Encode()), postFormContentType)
+}
+
+// PostRequestJSON use POST method to send a request to telegram in JSON encoding.
+func (b *Bot) PostRequestJSON(
+	ctx context.Context,
+	endpoint string,
+	payload any,
+) (code int, err error) {
+	buf := getBufFromPool()
+	defer returnBufToPool(buf)
+	if err := json.NewEncoder(buf).Encode(payload); err != nil {
+		return 0, fmt.Errorf("tgbot.Bot.PostRequestJSON: failed to json encode payload: %w", err)
+	}
+	return b.postRequest(ctx, endpoint, buf, jsonContentType)
 }
 
 // SendMessage sents a telegram messsage.

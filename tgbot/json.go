@@ -53,12 +53,21 @@ type Chat struct {
 
 // ReplyMessage is a message sent on webhook requests.
 type ReplyMessage struct {
-	Method  string `json:"method,omitempty"`
-	ChatID  int64  `json:"chat_id,omitempty"`
-	ReplyTo int64  `json:"reply_to_message_id,omitempty"`
-	Text    string `json:"text,omitempty"`
+	Method string `json:"method,omitempty"`
+	ChatID int64  `json:"chat_id,omitempty"`
+	Text   string `json:"text,omitempty"`
+
+	ReplyParameters *ReplyParameters `json:"reply_parameters,omitempty"`
 
 	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+
+	// Deprecated, use ReplyParameters instead.
+	ReplyTo int64 `json:"reply_to_message_id,omitempty"`
+}
+
+type ReplyParameters struct {
+	MessageID                int64 `json:"message_id"`
+	AllowSendingWithoutReply bool  `json:"allow_sending_without_reply,omitempty"`
 }
 
 // InlineKeyboardMarkup is used to provide single choice replies.

@@ -92,6 +92,11 @@ Use "` + fitCommand + ` clear" to remove fit preference and leave big images int
 	fitSaved   = `✅ Your new fit preference is saved: %d (0 means no downscaling)`
 )
 
+const (
+	archivePrefix = "https://archive.is/"
+	archiveNewest = archivePrefix + "newest/"
+)
+
 func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 	for _, entity := range message.Entities {
 		switch entity.Type {
@@ -114,6 +119,60 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 	return ""
 }
 
+func handleURL(
+	ctx context.Context,
+	w http.ResponseWriter,
+	message *tgbot.Message,
+	chat *EntityChatToken,
+	url string,
+	first bool,
+) {
+	reply := replyMessage
+	if !first {
+		reply = sendReplyMessage
+	}
+	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true, chat.FitImage)
+	if err != nil {
+		if errors.Is(err, errUnsupportedURL) {
+			reply(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
+		} else {
+			reply(ctx, w, message, fmt.Sprintf(failedEpubMsg, url), true, nil)
+			if first && !strings.HasPrefix(url, archivePrefix) {
+				go func() {
+					ctx := context.WithoutCancel(ctx)
+					newURL := archiveNewest + url
+					slog.DebugContext(ctx, "Failed with original url, retrying with archive.is", "err", err, "orig", url, "new", newURL)
+					handleURL(ctx, nil /* ResponseWriter */, message, chat, newURL, false /* first */)
+				}()
+			}
+		}
+		return
+	}
+	switch chat.Type {
+	default:
+		// Should not happen, but just in case
+		slog.WarnContext(
+			ctx,
+			"handleURL: unknown chat type",
+			"type", chat.Type,
+		)
+		reply(ctx, w, message, notStartedMsg, true, nil)
+
+	case 0:
+		// Should not happen, but just in case
+		slog.WarnContext(ctx, "handleURL: chat type = 0")
+		fallthrough
+	case AccountTypeRM:
+		uploadRM(ctx, w, message, chat, url, id, title, data, reply)
+
+	case AccountTypeDropbox:
+		uploadDropbox(ctx, w, message, chat, url, id, title, data, reply)
+
+	case AccountTypeKindle:
+		sendKindleEmail(ctx, w, message, chat, url, title, data, reply)
+	}
+}
+
 func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
 	chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
@@ -125,38 +184,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
-	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true, chat.FitImage)
-	if err != nil {
-		if errors.Is(err, errUnsupportedURL) {
-			replyMessage(ctx, w, message, fmt.Sprintf(unsupportedURLmsg, url), true, nil)
-		} else {
-			replyMessage(ctx, w, message, fmt.Sprintf(failedEpubMsg, url), true, nil)
-		}
-		return
-	}
-	switch chat.Type {
-	default:
-		// Should not happen, but just in case
-		slog.WarnContext(
-			ctx,
-			"urlHandler: unknown chat type",
-			"type", chat.Type,
-		)
-		replyMessage(ctx, w, message, notStartedMsg, true, nil)
-
-	case 0:
-		// Should not happen, but just in case
-		slog.WarnContext(ctx, "urlHandler: chat type = 0")
-		fallthrough
-	case AccountTypeRM:
-		uploadRM(ctx, w, message, chat, url, id, title, data)
-
-	case AccountTypeDropbox:
-		uploadDropbox(ctx, w, message, chat, url, id, title, data)
-
-	case AccountTypeKindle:
-		sendKindleEmail(ctx, w, message, chat, url, title, data)
-	}
+	handleURL(ctx, w, message, chat, url, true /* first */)
 }
 
 func sendKindleEmail(
@@ -166,6 +194,7 @@ func sendKindleEmail(
 	chat *EntityChatToken,
 	url, title string,
 	data *bytes.Buffer,
+	reply replyFunc,
 ) {
 	size := data.Len()
 	var err error
@@ -188,10 +217,10 @@ func sendKindleEmail(
 			"err", err,
 			"email", chat.KindleEmail,
 		)
-		replyMessage(ctx, w, message, fmt.Sprintf(failedEmail, url), true, nil)
+		reply(ctx, w, message, fmt.Sprintf(failedEmail, url), true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(successEmail, title, prettySize(size), url), true, nil)
+	reply(ctx, w, message, fmt.Sprintf(successEmail, title, prettySize(size), url), true, nil)
 }
 
 func uploadRM(
@@ -201,6 +230,7 @@ func uploadRM(
 	chat *EntityChatToken,
 	url, id, title string,
 	data *bytes.Buffer,
+	reply replyFunc,
 ) {
 	client := &rmapi.Client{
 		RefreshToken: chat.RMToken,
@@ -236,10 +266,10 @@ func uploadRM(
 			"uploadRM: Upload failed",
 			"err", err,
 		)
-		replyMessage(ctx, w, message, fmt.Sprintf(failedUploadRM, url), true, nil)
+		reply(ctx, w, message, fmt.Sprintf(failedUploadRM, url), true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(successUploadRM, title, prettySize(size), url), true, nil)
+	reply(ctx, w, message, fmt.Sprintf(successUploadRM, title, prettySize(size), url), true, nil)
 }
 
 func handleDropboxAuthError(
@@ -247,6 +277,7 @@ func handleDropboxAuthError(
 	w http.ResponseWriter,
 	message *tgbot.Message,
 	clientID string,
+	reply replyFunc,
 ) func(*DropboxClient, error) *DropboxClient {
 	return func(client *DropboxClient, err error) *DropboxClient {
 		if err != nil {
@@ -262,7 +293,7 @@ func handleDropboxAuthError(
 					sb.WriteString(fmt.Sprintf(dropboxAuthExplain, fmt.Sprintf(dropboxAuthURL, clientID)))
 				}
 			}
-			replyMessage(ctx, w, message, sb.String(), true, nil)
+			reply(ctx, w, message, sb.String(), true, nil)
 			return nil
 		}
 		return client
@@ -274,11 +305,12 @@ func dropboxClientFromChat(
 	w http.ResponseWriter,
 	message *tgbot.Message,
 	chat *EntityChatToken,
+	reply replyFunc,
 ) *DropboxClient {
 	clientID := os.Getenv("DROPBOX_CLIENT_ID")
 	clientSecret := os.Getenv("SECRET_DROPBOX_TOKEN")
 
-	return handleDropboxAuthError(ctx, w, message, clientID)(authDropboxRefresh(ctx, clientID, clientSecret, chat.DropboxToken))
+	return handleDropboxAuthError(ctx, w, message, clientID, reply)(authDropboxRefresh(ctx, clientID, clientSecret, chat.DropboxToken))
 }
 
 func uploadDropbox(
@@ -288,8 +320,9 @@ func uploadDropbox(
 	chat *EntityChatToken,
 	url, id, title string,
 	data *bytes.Buffer,
+	reply replyFunc,
 ) {
-	client := dropboxClientFromChat(ctx, w, message, chat)
+	client := dropboxClientFromChat(ctx, w, message, chat, reply)
 	if client == nil {
 		// error message already replied
 		return
@@ -320,10 +353,10 @@ func uploadDropbox(
 			"uploadDropbox: Upload failed",
 			"err", err,
 		)
-		replyMessage(ctx, w, message, fmt.Sprintf(failedUploadDropbox, url), true, nil)
+		reply(ctx, w, message, fmt.Sprintf(failedUploadDropbox, url), true, nil)
 		return
 	}
-	replyMessage(ctx, w, message, fmt.Sprintf(successUploadDropbox, filename, prettySize(size), url), true, nil)
+	reply(ctx, w, message, fmt.Sprintf(successUploadDropbox, filename, prettySize(size), url), true, nil)
 }
 
 func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
@@ -344,8 +377,8 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	params.Set(queryGray, "1")
 	params.Set(queryPassthroughUserAgent, "1")
 	sb.WriteString(params.Encode())
-	restURL := fmt.Sprintf(epubMsg, sb.String())
-	replyMessage(ctx, w, message, restURL, true, nil)
+	restURL := sb.String()
+	replyMessage(ctx, w, message, fmt.Sprintf(epubMsg, restURL), true, nil)
 	slog.InfoContext(
 		ctx,
 		"epubHandler: Generated rest url",
@@ -468,7 +501,7 @@ func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		), true, nil)
 		return
 	}
-	client := handleDropboxAuthError(ctx, w, message, dropboxClientID)(authDropboxCode(ctx, dropboxClientID, dropboxSecret, code))
+	client := handleDropboxAuthError(ctx, w, message, dropboxClientID, replyMessage)(authDropboxCode(ctx, dropboxClientID, dropboxSecret, code))
 	if client == nil {
 		// error already handled
 		return
@@ -564,7 +597,7 @@ func dirRM(ctx context.Context, w http.ResponseWriter, chat *EntityChatToken, me
 }
 
 func dirDropbox(ctx context.Context, w http.ResponseWriter, chat *EntityChatToken, message *tgbot.Message) {
-	client := dropboxClientFromChat(ctx, w, message, chat)
+	client := dropboxClientFromChat(ctx, w, message, chat, replyMessage)
 	if client == nil {
 		// error message already replied
 		return
@@ -769,6 +802,35 @@ func reply200(w http.ResponseWriter) {
 	http.Error(w, http.StatusText(code), code)
 }
 
+func generateReplyMessage(
+	orig *tgbot.Message,
+	msg string,
+	quote bool,
+	markup *tgbot.InlineKeyboardMarkup,
+) *tgbot.ReplyMessage {
+	reply := &tgbot.ReplyMessage{
+		ChatID:      orig.Chat.ID,
+		Text:        msg,
+		ReplyMarkup: markup,
+	}
+	if quote {
+		reply.ReplyParameters = &tgbot.ReplyParameters{
+			MessageID:                orig.ID,
+			AllowSendingWithoutReply: true,
+		}
+	}
+	return reply
+}
+
+type replyFunc func(
+	ctx context.Context,
+	w http.ResponseWriter,
+	orig *tgbot.Message,
+	msg string,
+	quote bool,
+	markup *tgbot.InlineKeyboardMarkup,
+)
+
 func replyMessage(
 	ctx context.Context,
 	w http.ResponseWriter,
@@ -777,18 +839,30 @@ func replyMessage(
 	quote bool,
 	markup *tgbot.InlineKeyboardMarkup,
 ) {
-	reply := tgbot.ReplyMessage{
-		Method:      "sendMessage",
-		ChatID:      orig.Chat.ID,
-		Text:        msg,
-		ReplyMarkup: markup,
-	}
-	if quote {
-		reply.ReplyTo = orig.ID
-	}
+	reply := generateReplyMessage(orig, msg, quote, markup)
+	reply.Method = "sendMessage"
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
+
+func sendReplyMessage(
+	ctx context.Context,
+	_ http.ResponseWriter,
+	orig *tgbot.Message,
+	msg string,
+	quote bool,
+	markup *tgbot.InlineKeyboardMarkup,
+) {
+	reply := generateReplyMessage(orig, msg, quote, markup)
+	if code, err := getBot().PostRequestJSON(ctx, "sendMessage", reply); err != nil {
+		slog.ErrorContext(ctx, "sendReplyMessage failed", "err", err, "code", code)
+	}
+}
+
+var (
+	_ replyFunc = replyMessage
+	_ replyFunc = sendReplyMessage
+)
 
 var sizeUnits = []string{"KiB", "MiB"}
 
