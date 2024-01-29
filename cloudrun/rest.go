@@ -83,9 +83,8 @@ func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id
 	ctx, cancel := context.WithTimeout(ctx, epubTimeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-		URL:           url,
-		UserAgent:     ua,
-		TwitterBearer: getTwitterBearer(),
+		URL:       url,
+		UserAgent: ua,
 	})
 	if err != nil {
 		return "", "", nil, fmt.Errorf(

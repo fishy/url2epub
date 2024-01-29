@@ -8,7 +8,6 @@ image=url2epub
 
 # secret token names on https://console.cloud.google.com/security/secret-manager
 telegram_token=telegram-token
-twitter_bearer=twitter-bearer
 mailgun_token=mailgun-token
 dropbox_token=dropbox-token
 
@@ -40,11 +39,11 @@ deploy:
 		--update-env-vars MAILGUN_DOMAIN=$(mailgun_domain) \
 		--update-env-vars MAILGUN_FROM=$(mailgun_from) \
 		--update-env-vars DROPBOX_CLIENT_ID=$(dropbox_client_id) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"
+		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"
 	rm -Rf vendor
 
 .PHONY: update-secrets
 
 update-secrets:
 	$(gcloud) run services update $(cloudrunname) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_TWITTER_BEARER=$(twitter_bearer):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest"
+		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"

@@ -52,11 +52,6 @@ var (
 		0,
 		"Minimal nodes to use article node",
 	)
-	bearer = flag.String(
-		"bearer",
-		"",
-		"Twitter bearer token",
-	)
 )
 
 func main() {
@@ -92,9 +87,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	root, baseURL, err := url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-		URL:           *url,
-		UserAgent:     *ua,
-		TwitterBearer: *bearer,
+		URL:       *url,
+		UserAgent: *ua,
 	})
 	if err != nil {
 		slog.Error("url2epub.GetHTML failed", "err", err)

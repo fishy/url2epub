@@ -77,7 +77,6 @@ func main() {
 		os.Exit(1)
 	}
 	initBot(ctx)
-	initTwitter(ctx)
 
 	defaultUserAgent = fmt.Sprintf(userAgentTemplate, os.Getenv("K_REVISION"))
 	slog.InfoContext(
@@ -228,22 +227,6 @@ func initBot(ctx context.Context) {
 
 func getBot() *tgbot.Bot {
 	return tokenValue.Load()
-}
-
-var twitterBearerValue atomic.Pointer[string]
-
-// initTwitter initializes botToken.
-func initTwitter(ctx context.Context) {
-	secret := os.Getenv("SECRET_TWITTER_BEARER")
-	twitterBearerValue.Store(&secret)
-}
-
-func getTwitterBearer() string {
-	s := twitterBearerValue.Load()
-	if s == nil {
-		return ""
-	}
-	return *s
 }
 
 func getProjectID() string {
