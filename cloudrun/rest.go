@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.yhsif.com/ctxslog"
+
 	"go.yhsif.com/url2epub"
 )
 
@@ -27,6 +29,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := logContext(r)
 
 	url := r.FormValue(queryURL)
+	ctx = ctxslog.Attach(ctx, "origUrl", url)
 	gray, _ := strconv.ParseBool(r.FormValue(queryGray))
 	fit64, _ := strconv.ParseInt(r.FormValue(queryFit), 10, 64)
 	fit := int(fit64)
@@ -34,6 +37,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	userAgent := defaultUserAgent
 	if passthroughUA {
 		userAgent = r.Header.Get("user-agent")
+		ctx = ctxslog.Attach(ctx, "userAgent", userAgent)
 	}
 	_, title, data, err := getEpub(ctx, url, userAgent, gray, fit)
 	if err != nil {

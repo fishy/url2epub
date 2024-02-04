@@ -17,6 +17,8 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"go.yhsif.com/ctxslog"
+
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
 
@@ -191,6 +193,7 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
+	ctx = ctxslog.Attach(ctx, "origUrl", url)
 	handleURL(ctx, w, message, chat, url, true /* first */)
 }
 
