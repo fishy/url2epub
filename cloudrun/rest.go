@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	neturl "net/url"
 	"strconv"
 	"time"
 
@@ -95,38 +94,6 @@ func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id
 			"unable to get html for %q: %v",
 			url,
 			err,
-		)
-	}
-	if !root.IsAMP() {
-		if ampURL := root.GetAMPurl(); ampURL != "" {
-			// ampURL could be relative, resolve to full url
-			u, err := neturl.Parse(ampURL)
-			if err != nil {
-				return "", "", nil, fmt.Errorf(
-					"unable to parse amp url %q: %w",
-					ampURL,
-					err,
-				)
-			}
-			ampURL = baseURL.ResolveReference(u).String()
-			root, baseURL, err = url2epub.GetHTML(ctx, url2epub.GetHTMLArgs{
-				URL:       ampURL,
-				UserAgent: ua,
-			})
-			if err != nil {
-				return "", "", nil, fmt.Errorf(
-					"unable to get amp html for %q: %v",
-					ampURL,
-					err,
-				)
-			}
-		}
-	}
-	if !root.IsAMP() {
-		slog.InfoContext(
-			ctx,
-			"Generating epub from non-amp url",
-			"url", baseURL.String(),
 		)
 	}
 	node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
