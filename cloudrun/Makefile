@@ -23,7 +23,7 @@ docker_image=$(region)-docker.pkg.dev/$(project)/$(image)/$(image)
 full_git_version=$(shell git rev-parse HEAD)
 version_tag=$(shell echo $(full_git_version) | cut -c1-12)
 
-memory_limit_mebibytes=1024
+memory_limit_mebibytes=2048
 gomemlimit=$(shell expr $(memory_limit_mebibytes) / 5 \* 4)
 
 .PHONY: deploy
