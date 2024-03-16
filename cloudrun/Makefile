@@ -23,6 +23,9 @@ docker_image=$(region)-docker.pkg.dev/$(project)/$(image)/$(image)
 full_git_version=$(shell git rev-parse HEAD)
 version_tag=$(shell echo $(full_git_version) | cut -c1-12)
 
+memory_limit_mebibytes=1024
+gomemlimit=$(shell expr $(memory_limit_mebibytes) / 5 \* 4)
+
 .PHONY: deploy
 
 deploy:
@@ -34,6 +37,10 @@ deploy:
 		--platform managed \
 		--allow-unauthenticated \
 		--region $(region) $(cloudrunname) \
+		--execution-environment gen2 \
+		--cpu 1 \
+		--memory $(memory_limit_mebibytes)Mi \
+		--update-env-vars GOMEMLIMIT=$(gomemlimit)MiB \
 		--update-env-vars CLOUD_PROJECT_ID=$(project) \
 		--update-env-vars VERSION_TAG=$(version_tag) \
 		--update-env-vars MAILGUN_DOMAIN=$(mailgun_domain) \
