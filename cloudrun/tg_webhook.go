@@ -39,7 +39,10 @@ Please add one of "rm" (for reMarkable account), "kindle" (for kindle and other 
 
 	startExplainRM = `ℹ️
 
-To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".`
+To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".
+
+There are also known issues/limitations on direct reMarkable cloud support, you might want to use Dropbox integration instead.
+See https://b.yuxuan.org/url2epub-dropbox & https://b.yuxuan.org/url2epub-kindle for more details.`
 	startSuccessRM = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/device/desktop).
 By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
 You can also use ` + fontCommand + ` to set the default font on the created epub files.`
@@ -403,28 +406,33 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		replyMessage(ctx, w, message, startExplain, true, nil)
 		return
 	}
-	const (
-		rmPrefix      = "rm "
-		kindlePrefix  = "kindle "
-		dropboxPrefix = "dropbox"
-	)
-	if strings.HasPrefix(strings.ToLower(payload), rmPrefix) {
-		startRM(ctx, w, message, payload[len(rmPrefix):])
+
+	checkPrefix := func(prefix string) (string, bool) {
+		if strings.ToLower(payload) == prefix {
+			return "", true
+		}
+		if strings.HasPrefix(strings.ToLower(payload), prefix+" ") {
+			return strings.TrimSpace(payload[len(prefix):]), true
+		}
+		return "", false
+	}
+	if payload, ok := checkPrefix("rm"); ok {
+		startRM(ctx, w, message, payload)
 		return
 	}
-	if strings.HasPrefix(strings.ToLower(payload), kindlePrefix) {
-		startKindle(ctx, w, message, payload[len(kindlePrefix):])
+	if payload, ok := checkPrefix("kindle"); ok {
+		startKindle(ctx, w, message, payload)
 		return
 	}
-	if strings.HasPrefix(strings.ToLower(payload), dropboxPrefix) {
-		startDropbox(ctx, w, message, payload[len(dropboxPrefix):])
+	if payload, ok := checkPrefix("dropbox"); ok {
+		startDropbox(ctx, w, message, payload)
 		return
 	}
+
 	replyMessage(ctx, w, message, startExplain, true, nil)
 }
 
-func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, payload string) {
-	token := strings.TrimSpace(payload)
+func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, token string) {
 	if token == "" {
 		replyMessage(ctx, w, message, startExplainRM, true, nil)
 		return
@@ -467,8 +475,7 @@ func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message,
 	), true, nil)
 }
 
-func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, payload string) {
-	email := strings.TrimSpace(payload)
+func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, email string) {
 	if email == "" {
 		replyMessage(ctx, w, message, fmt.Sprintf(
 			startExplainKindle,
@@ -499,11 +506,10 @@ func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	), true, nil)
 }
 
-func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, payload string) {
+func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, code string) {
 	dropboxClientID := os.Getenv("DROPBOX_CLIENT_ID")
 	dropboxSecret := os.Getenv("SECRET_DROPBOX_TOKEN")
 
-	code := strings.TrimSpace(payload)
 	if code == "" {
 		replyMessage(ctx, w, message, fmt.Sprintf(
 			startExplainDropbox,
