@@ -93,9 +93,11 @@ Use "` + fitCommand + ` <number>" to auto fit images in the epub file to maximum
 
 For example, "` + fitCommand + ` 200" will auto downscale 1024x768 image to 200x150, or 768x1024 image to 150x200, but leave 150x150 image intact.
 
-Use "` + fitCommand + ` clear" to remove fit preference and leave big images intact.`
+Use "` + fitCommand + ` clear" to remove fit preference and leave big images intact.
+
+Your current fit preference is: %d (0 means no downscaling).`
 	fitSaveErr = `🚫 Failed to save fit preference. Please try again later.`
-	fitSaved   = `✅ Your new fit preference is saved: %d (0 means no downscaling)`
+	fitSaved   = `✅ Your new fit preference is saved: %d (0 means no downscaling).`
 )
 
 const (
@@ -772,14 +774,17 @@ func dirDropboxCallbackHandler(ctx context.Context, w http.ResponseWriter, data 
 }
 
 func fitHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
-	payload := strings.TrimSpace(strings.TrimPrefix(text, fitCommand))
-	if payload == "" {
-		replyMessage(ctx, w, message, fitExplain, true, nil)
-		return
-	}
 	chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
+		return
+	}
+	payload := strings.TrimSpace(strings.TrimPrefix(text, fitCommand))
+	if payload == "" {
+		replyMessage(ctx, w, message, fmt.Sprintf(
+			fitExplain,
+			chat.FitImage,
+		), true, nil)
 		return
 	}
 	if payload == "clear" {
