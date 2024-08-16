@@ -87,8 +87,8 @@ go.opentelemetry.io/otel/trace v1.27.0 h1:IqYb813p7cmbHk0a5y6pD5JPakbVfftRXABGt5
 go.opentelemetry.io/otel/trace v1.27.0/go.mod h1:6RiD1hkAprV4/q+yd2ln1HG9GoPx39SuvvstaLBl+l4=
 go.yhsif.com/ctxslog v1.1.0 h1:r0rHL70Vjy4NVeITRUwtBCgt6CHY+QchXOGi7Wuf3j8=
 go.yhsif.com/ctxslog v1.1.0/go.mod h1:xFOd7LrNvPlOvpmFKDwLWwXQnNRnnabeuzx2+bBcp4A=
-go.yhsif.com/immutable v0.2.0 h1:ryjhH9U9OFzYZrps+FN2H/02RF6LchR9l65IzE4inJ0=
-go.yhsif.com/immutable v0.2.0/go.mod h1:F9gWg394KjDL3EpuyCWf6Uz6QBwI1YqypnTRDqIq3kU=
+go.yhsif.com/immutable v1.0.0-rc1 h1:9uTL/8DYRhi4RbEi4nSkqcszjB8sBuxcgD+3A91ZkUw=
+go.yhsif.com/immutable v1.0.0-rc1/go.mod h1:u1Qf6g5SDBaTnKE+Serz1dO6H2mzOPYpMeCu/qSB5PQ=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.23.0 h1:dIJU/v2J8Mdglj/8rJ6UUOM3Zc9zLZxVZwwxMooUSAI=
