@@ -187,8 +187,7 @@ func recursivePrint(n *url2epub.Node, prefix string) {
 		sb.WriteString("]")
 		fmt.Println(sb.String())
 	}
-	n.ForEachChild(func(c *url2epub.Node) bool {
+	for c := range n.Children() {
 		recursivePrint(c, prefix+"| ")
-		return true
-	})
+	}
 }

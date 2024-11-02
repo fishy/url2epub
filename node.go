@@ -1,6 +1,7 @@
 package url2epub
 
 import (
+	"iter"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -35,6 +36,13 @@ func (n Node) ForEachChild(f func(child *Node) bool) {
 	}
 }
 
+// Children returns an iterator for all n's children.
+func (n Node) Children() iter.Seq[*Node] {
+	return func(yield func(*Node) bool) {
+		n.ForEachChild(yield)
+	}
+}
+
 // FindFirstAtomNode returns n itself or the first node in its descendants,
 // with Type == html.ElementNode and DataAtom == a, using depth first search.
 //
@@ -48,13 +56,12 @@ func (n *Node) FindFirstAtomNode(a atom.Atom) *Node {
 		return n
 	}
 	var found *Node
-	n.ForEachChild(func(c *Node) bool {
+	for c := range n.Children() {
 		if ret := c.FindFirstAtomNode(a); ret != nil {
 			found = ret
-			return false
+			break
 		}
-		return true
-	})
+	}
 	return found
 }
 
@@ -93,18 +100,17 @@ func (n *Node) GetAMPurl() string {
 		return ""
 	}
 	var found string
-	head.ForEachChild(func(cc *Node) bool {
+	for cc := range head.Children() {
 		c := cc.AsNode()
 		if c.Type != html.ElementNode || c.DataAtom != atom.Link {
-			return true
+			continue
 		}
 		m := buildAttrMap(&c)
 		if m["rel"] == "amphtml" {
 			found = m["href"]
-			return false
+			break
 		}
-		return true
-	})
+	}
 	return found
 }
 
@@ -122,18 +128,17 @@ func (n *Node) GetTitle() (title string) {
 	}
 
 	// Try to find og:title.
-	head.ForEachChild(func(cc *Node) bool {
+	for cc := range head.Children() {
 		c := cc.AsNode()
 		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
-			return true
+			continue
 		}
 		m := buildAttrMap(&c)
 		if m["property"] == "og:title" {
 			title = m["content"]
-			return false
+			break
 		}
-		return true
-	})
+	}
 	if title != "" {
 		return title
 	}
@@ -142,15 +147,13 @@ func (n *Node) GetTitle() (title string) {
 	if titleNode == nil {
 		return ""
 	}
-	titleNode.ForEachChild(func(cc *Node) bool {
+	for cc := range titleNode.Children() {
 		c := cc.AsNode()
 		if c.Type == html.TextNode {
-			title = strings.TrimSpace(c.Data)
-			return false
+			return strings.TrimSpace(c.Data)
 		}
-		return true
-	})
-	return title
+	}
+	return ""
 }
 
 func buildAttrMap(node *html.Node) map[string]string {

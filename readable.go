@@ -403,20 +403,19 @@ func (n *Node) countRecursive(minCount int) (count int, hasMin bool) {
 		if minCount <= 0 {
 			return 0, true
 		}
-		n.ForEachChild(func(c *Node) bool {
+		for c := range n.Children() {
 			subCount, hit := c.countRecursive(minCount)
 			if hit {
 				hasMin = hit
-				return false
+				break
 			}
 			count += subCount
 			minCount -= subCount
 			if minCount <= 0 {
 				hasMin = hit
-				return false
+				break
 			}
-			return true
-		})
+		}
 		if hasMin {
 			return 0, true
 		}
@@ -565,21 +564,15 @@ func (n *Node) readableRecursive(
 			// See https://github.com/fishy/url2epub/issues/3.
 			return newNode, nil
 		}
-		var iterationErr error
-		n.ForEachChild(func(c *Node) bool {
+		for c := range n.Children() {
 			child, err := c.readableRecursive(ctx, wg, baseURL, userAgent, imagesDir, images, imgMapping, imgCounter, gray, fitImage)
 			if err != nil {
-				iterationErr = err
-				return false
+				return nil, err
 			}
 			if child == nil {
-				return true
+				continue
 			}
 			newNode.AppendChild(child)
-			return true
-		})
-		if iterationErr != nil {
-			return nil, iterationErr
 		}
 		if len(newNode.Attr) == 0 && newNode.FirstChild == nil && !keepEmptyAtoms.Contains(newNode.DataAtom) {
 			// This node has no children and no attributes, skipping
