@@ -6,8 +6,8 @@ require (
 	go.yhsif.com/ctxslog v1.1.0
 	go.yhsif.com/flagutils v0.2.0
 	go.yhsif.com/url2epub v0.4.0
-	golang.org/x/image v0.16.0
-	golang.org/x/net v0.28.0
+	golang.org/x/image v0.21.0
+	golang.org/x/net v0.30.0
 )
 
 require (
