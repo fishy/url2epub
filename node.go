@@ -156,6 +156,33 @@ func (n *Node) GetTitle() (title string) {
 	return ""
 }
 
+// GetAuthor returns the author of the document, if any.
+func (n *Node) GetAuthor() (author string) {
+	defer func() {
+		author = html.UnescapeString(author)
+	}()
+
+	head := n.FindFirstAtomNode(atom.Head)
+	if head == nil {
+		return ""
+	}
+
+	for cc := range head.Children() {
+		c := cc.AsNode()
+		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
+			continue
+		}
+		m := buildAttrMap(&c)
+		if m["name"] == "author" {
+			return m["content"]
+		}
+		if m["property"] == "author" {
+			return m["content"]
+		}
+	}
+	return ""
+}
+
 func buildAttrMap(node *html.Node) map[string]string {
 	m := make(map[string]string, len(node.Attr))
 	for _, attr := range node.Attr {

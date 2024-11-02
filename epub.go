@@ -56,7 +56,10 @@ var (
  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
   <dc:identifier id="BookID">{{.ID}}</dc:identifier>
   <dc:title>{{.Title}}</dc:title>
-	<dc:language>{{.Lang}}</dc:language>
+	<dc:language>{{.Lang}}</dc:language>{{if .Author}}
+	<dc:creator id="creator">{{.Author}}</dc:creator>
+	<meta refines="#creator" property="role" scheme="marc:relators" id="role">aut</meta>
+	<meta property="dcterms:creator" id="auth">{{.Author}}</meta>{{end}}
   <meta property="dcterms:modified">{{.Time}}</meta>
  </metadata>
  <manifest>
@@ -93,6 +96,7 @@ var (
 type epubOpfData struct {
 	ID          string
 	Title       string
+	Author      string
 	Lang        string
 	Time        string
 	ArticlePath string
@@ -107,6 +111,9 @@ type EpubArgs struct {
 
 	// The title of the epub.
 	Title string
+
+	// The author of the epub, if any.
+	Author string
 
 	// The node pointing to the html tag.
 	Node *html.Node
@@ -220,6 +227,7 @@ func Epub(args EpubArgs) (id string, err error) {
 	data := epubOpfData{
 		ID:          html.EscapeString(id),
 		Title:       html.EscapeString(args.Title),
+		Author:      html.EscapeString(args.Author),
 		Lang:        html.EscapeString(FromNode(args.Node).GetLang()),
 		Time:        time.Now().UTC().Format(time.RFC3339),
 		ArticlePath: epubArticleFilename,

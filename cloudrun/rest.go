@@ -124,6 +124,7 @@ func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id
 	id, err = url2epub.Epub(url2epub.EpubArgs{
 		Dest:   buf,
 		Title:  title,
+		Author: root.GetAuthor(),
 		Node:   node,
 		Images: images,
 	})

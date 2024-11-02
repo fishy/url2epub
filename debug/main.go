@@ -117,6 +117,7 @@ func main() {
 		if !root.IsAMP() {
 			slog.Debug("Not AMP")
 		}
+		slog.Debug("Page metadata", "title", root.GetTitle(), "author", root.GetAuthor())
 
 		node, images, err := root.Readable(ctx, url2epub.ReadableArgs{
 			BaseURL:         baseURL,
@@ -136,6 +137,7 @@ func main() {
 			id, err := url2epub.Epub(url2epub.EpubArgs{
 				Dest:   os.Stdout,
 				Title:  root.GetTitle(),
+				Author: root.GetAuthor(),
 				Node:   node,
 				Images: images,
 			})
