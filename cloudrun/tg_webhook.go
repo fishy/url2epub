@@ -30,6 +30,10 @@ import (
 	_ "image/png"
 )
 
+var defaultLangByDomain = map[string]string{
+	"mp.weixin.qq.com": "zh_CN",
+}
+
 const (
 	startErrMsg  = `🚫 Failed to register token %q. Please double check your token is correct. It should be a 8-digit code from https://my.remarkable.com/device/desktop/connect.`
 	startSaveErr = `🚫 Failed to save this registration. Please try again later.`
@@ -241,6 +245,10 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 	lang := firstLangInMessage(message)
 	if lang != "" {
 		slog.DebugContext(ctx, "Found overriding lang in message", "lang", lang)
+	} else if u, err := neturl.Parse(url); err == nil {
+		if lang = defaultLangByDomain[u.Host]; lang != "" {
+			slog.DebugContext(ctx, "Overriding lang from domain", "lang", lang, "domain", u.Host)
+		}
 	}
 	handleURL(ctx, w, message, chat, url, lang, true /* first */)
 }
@@ -436,6 +444,10 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	params.Set(queryGray, "1")
 	if lang := firstLangInMessage(message); lang != "" {
 		params.Set(queryLang, lang)
+	} else if u, err := neturl.Parse(url); err == nil {
+		if lang = defaultLangByDomain[u.Host]; lang != "" {
+			slog.DebugContext(ctx, "Overriding lang from domain", "lang", lang, "domain", u.Host)
+		}
 	}
 	params.Set(queryPassthroughUserAgent, "1")
 	sb.WriteString(params.Encode())
