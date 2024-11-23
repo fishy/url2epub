@@ -25,6 +25,7 @@ Generate an epub file from the given URL.
 | `url` | string | The URL of the article. |
 | `gray` | [bool][bool] | Whether to grayscale all images. |
 | `fit` | int | Downscale images to fit in fit x fit if needed, only used when gray is set to true. |
+| `lang` | string | Override the language detected from the url for epub. |
 | `passthrough-user-agent` | [bool][bool] | Use the same `User-Agent` from the original request. |
 
 #### Response

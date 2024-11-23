@@ -118,6 +118,9 @@ type EpubArgs struct {
 	// The node pointing to the html tag.
 	Node *html.Node
 
+	// If non-empty, override the language detected from Node.
+	OverrideLang string
+
 	// Images map:
 	// key: image local filename
 	// value: image content
@@ -224,11 +227,15 @@ func Epub(args EpubArgs) (id string, err error) {
 	}
 
 	id = randomID.String()
+	lang := args.OverrideLang
+	if lang == "" {
+		lang = FromNode(args.Node).GetLang()
+	}
 	data := epubOpfData{
 		ID:          html.EscapeString(id),
 		Title:       html.EscapeString(args.Title),
 		Author:      html.EscapeString(args.Author),
-		Lang:        html.EscapeString(FromNode(args.Node).GetLang()),
+		Lang:        html.EscapeString(lang),
 		Time:        time.Now().UTC().Format(time.RFC3339),
 		ArticlePath: epubArticleFilename,
 		NavPath:     epubNavFilename,

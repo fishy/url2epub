@@ -11,6 +11,7 @@ import (
 	neturl "net/url"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -127,12 +128,49 @@ func firstURLInMessage(ctx context.Context, message *tgbot.Message) string {
 	return ""
 }
 
+var langRE = regexp.MustCompile(`\blang: ?([a-zA-Z_-]*)\b`)
+
+func firstLangInMessage(message *tgbot.Message) string {
+	inEntity := func(entity tgbot.MessageEntity, index int64) bool {
+		return index >= entity.Offset && index <= entity.Offset+entity.Length
+	}
+	inURL := func(entity tgbot.MessageEntity, start, end int) bool {
+		switch entity.Type {
+		default:
+			return false
+
+		case "url":
+			fallthrough
+		case "text_link":
+			return inEntity(entity, int64(start)) || inEntity(entity, int64(end))
+		}
+	}
+	inAnyURL := func(start, end int) bool {
+		for _, entity := range message.Entities {
+			if inURL(entity, start, end) {
+				return true
+			}
+		}
+		return false
+	}
+	indices := langRE.FindAllSubmatchIndex([]byte(message.Text), -1)
+	for _, groups := range indices {
+		start := len(utf16.Encode([]rune(message.Text[:groups[0]])))
+		end := len(utf16.Encode([]rune(message.Text[:groups[1]])))
+		if !inAnyURL(start, end) {
+			return message.Text[groups[2]:groups[3]]
+		}
+	}
+	return ""
+}
+
 func handleURL(
 	ctx context.Context,
 	w http.ResponseWriter,
 	message *tgbot.Message,
 	chat *EntityChatToken,
 	url string,
+	lang string,
 	first bool,
 ) {
 	reply := replyMessage
@@ -140,7 +178,7 @@ func handleURL(
 		reply = sendReplyMessage
 	}
 	start := time.Now()
-	id, title, data, err := getEpub(ctx, url, defaultUserAgent, true, chat.FitImage)
+	id, title, data, err := getEpub(ctx, url, defaultUserAgent, lang, true, chat.FitImage)
 	if !first {
 		slog.DebugContext(ctx, "Retried with archive.is", "err", err, "url", url, "took", time.Since(start))
 	}
@@ -155,7 +193,7 @@ func handleURL(
 					ctx := context.WithoutCancel(ctx)
 					newURL := archiveNewest + url
 					slog.DebugContext(ctx, "Failed with original url, retrying with archive.is", "err", err, "orig", url, "new", newURL)
-					handleURL(ctx, nil /* ResponseWriter */, message, chat, newURL, false /* first */)
+					handleURL(ctx, nil /* ResponseWriter */, message, chat, newURL, lang, false /* first */)
 				}()
 			}
 			reply(ctx, w, message, msg, true, nil)
@@ -199,7 +237,12 @@ func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Messa
 		return
 	}
 	ctx = ctxslog.Attach(ctx, "origUrl", url)
-	handleURL(ctx, w, message, chat, url, true /* first */)
+
+	lang := firstLangInMessage(message)
+	if lang != "" {
+		slog.DebugContext(ctx, "Found overriding lang in message", "lang", lang)
+	}
+	handleURL(ctx, w, message, chat, url, lang, true /* first */)
 }
 
 func sendKindleEmail(
@@ -383,6 +426,7 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 		replyMessage(ctx, w, message, noURLmsg, true, nil)
 		return
 	}
+
 	var sb strings.Builder
 	sb.WriteString(globalURLPrefix)
 	sb.WriteString(epubEndpoint)
@@ -390,6 +434,9 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	params := make(neturl.Values)
 	params.Set(queryURL, url)
 	params.Set(queryGray, "1")
+	if lang := firstLangInMessage(message); lang != "" {
+		params.Set(queryLang, lang)
+	}
 	params.Set(queryPassthroughUserAgent, "1")
 	sb.WriteString(params.Encode())
 	restURL := sb.String()

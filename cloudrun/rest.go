@@ -19,6 +19,7 @@ const (
 	queryURL                  = "url"
 	queryGray                 = "gray"
 	queryFit                  = "fit"
+	queryLang                 = "lang"
 	queryPassthroughUserAgent = "passthrough-user-agent"
 )
 
@@ -38,7 +39,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 		userAgent = r.Header.Get("user-agent")
 		ctx = ctxslog.Attach(ctx, "userAgent", userAgent)
 	}
-	_, title, data, err := getEpub(ctx, url, userAgent, gray, fit)
+	_, title, data, err := getEpub(ctx, url, userAgent, r.FormValue(queryLang), gray, fit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -54,7 +55,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 
 var errUnsupportedURL = errors.New("unsupported URL")
 
-func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id, title string, data *bytes.Buffer, err error) {
+func getEpub(ctx context.Context, url string, ua string, lang string, gray bool, fit int) (id, title string, data *bytes.Buffer, err error) {
 	if ua == "" {
 		ua = defaultUserAgent
 	}
@@ -122,11 +123,12 @@ func getEpub(ctx context.Context, url string, ua string, gray bool, fit int) (id
 	data = buf
 	title = root.GetTitle()
 	id, err = url2epub.Epub(url2epub.EpubArgs{
-		Dest:   buf,
-		Title:  title,
-		Author: root.GetAuthor(),
-		Node:   node,
-		Images: images,
+		Dest:         buf,
+		Title:        title,
+		Author:       root.GetAuthor(),
+		Node:         node,
+		OverrideLang: lang,
+		Images:       images,
 	})
 	if err != nil {
 		err = fmt.Errorf("unable to create epub: %w", err)
