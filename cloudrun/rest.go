@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	neturl "net/url"
 	"strconv"
 	"time"
 
@@ -46,7 +47,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set(
 		"content-disposition",
-		fmt.Sprintf(`attachment; filename="%s.epub"`, title),
+		fmt.Sprintf(`attachment; filename*=UTF-8''%s.epub`, neturl.QueryEscape(title)),
 	)
 	w.Header().Set("content-type", url2epub.EpubMimeType)
 	w.Header().Set("content-length", strconv.FormatInt(int64(data.Len()), 10))
