@@ -1,6 +1,6 @@
 module go.yhsif.com/url2epub/rmapi/debug
 
-go 1.23
+go 1.24
 
 require (
 	github.com/google/uuid v1.6.0
@@ -9,7 +9,7 @@ require (
 
 require (
 	go.yhsif.com/immutable v1.0.0-rc1 // indirect
-	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 )
 
 replace go.yhsif.com/url2epub => ../../
