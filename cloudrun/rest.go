@@ -27,7 +27,10 @@ const (
 const minArticleNodes = 20
 
 func restEpubHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := logContext(r)
+	ctx := ctxslog.Attach(
+		logContext(r),
+		"accountType", "rest",
+	)
 
 	url := r.FormValue(queryURL)
 	ctx = ctxslog.Attach(ctx, "origUrl", url)

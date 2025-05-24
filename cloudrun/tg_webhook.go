@@ -216,13 +216,13 @@ func handleURL(
 		fallthrough
 	case AccountTypeRM:
 		sendReplyMessage(ctx, nil, message, warnRM, true, nil)
-		uploadRM(ctx, w, message, chat, url, id, title, data, reply)
+		uploadRM(ctxslog.Attach(ctx, "accountType", "rm"), w, message, chat, url, id, title, data, reply)
 
 	case AccountTypeDropbox:
-		uploadDropbox(ctx, w, message, chat, url, id, title, data, reply)
+		uploadDropbox(ctxslog.Attach(ctx, "accountType", "dropbox"), w, message, chat, url, id, title, data, reply)
 
 	case AccountTypeKindle:
-		sendKindleEmail(ctx, w, message, chat, url, title, data, reply)
+		sendKindleEmail(ctxslog.Attach(ctx, "accountType", "kindle"), w, message, chat, url, title, data, reply)
 	}
 }
 
