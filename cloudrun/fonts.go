@@ -71,7 +71,7 @@ var fonts = [][]fontInfo{
 }
 
 func fontHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
@@ -111,7 +111,7 @@ func fontCallbackHandler(ctx context.Context, w http.ResponseWriter, data string
 		reply200(w)
 		return
 	}
-	chat := GetChat(ctx, callback.Message.Chat.ID)
+	ctx, chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
 		slog.ErrorContext(
 			ctx,

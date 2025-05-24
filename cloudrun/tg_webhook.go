@@ -216,18 +216,18 @@ func handleURL(
 		fallthrough
 	case AccountTypeRM:
 		sendReplyMessage(ctx, nil, message, warnRM, true, nil)
-		uploadRM(ctxslog.Attach(ctx, "accountType", "rm"), w, message, chat, url, id, title, data, reply)
+		uploadRM(ctx, w, message, chat, url, id, title, data, reply)
 
 	case AccountTypeDropbox:
-		uploadDropbox(ctxslog.Attach(ctx, "accountType", "dropbox"), w, message, chat, url, id, title, data, reply)
+		uploadDropbox(ctx, w, message, chat, url, id, title, data, reply)
 
 	case AccountTypeKindle:
-		sendKindleEmail(ctxslog.Attach(ctx, "accountType", "kindle"), w, message, chat, url, title, data, reply)
+		sendKindleEmail(ctx, w, message, chat, url, title, data, reply)
 	}
 }
 
 func urlHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
@@ -494,7 +494,7 @@ func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 		), true, nil)
 		return
 	}
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		chat = &EntityChatToken{
 			Chat: message.Chat.ID,
@@ -533,7 +533,7 @@ func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		// error already handled
 		return
 	}
-	chat := GetChat(ctx, message.Chat.ID)
+	_, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		chat = &EntityChatToken{
 			Chat: message.Chat.ID,
@@ -541,6 +541,7 @@ func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 	}
 	chat.Type = AccountTypeDropbox
 	chat.DropboxToken = client.RefreshToken
+	ctx = ctxslog.Attach(ctx, "accountType", chat.Type)
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -554,7 +555,7 @@ func startDropbox(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 }
 
 func stopHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
@@ -564,7 +565,7 @@ func stopHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 }
 
 func dirHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return
@@ -675,7 +676,7 @@ func dirRMCallbackHandler(ctx context.Context, w http.ResponseWriter, data strin
 		reply200(w)
 		return
 	}
-	chat := GetChat(ctx, callback.Message.Chat.ID)
+	ctx, chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
 		slog.ErrorContext(
 			ctx,
@@ -740,7 +741,7 @@ func dirDropboxCallbackHandler(ctx context.Context, w http.ResponseWriter, data 
 		reply200(w)
 		return
 	}
-	chat := GetChat(ctx, callback.Message.Chat.ID)
+	ctx, chat := GetChat(ctx, callback.Message.Chat.ID)
 	if chat == nil {
 		slog.ErrorContext(
 			ctx,
@@ -783,7 +784,7 @@ func dirDropboxCallbackHandler(ctx context.Context, w http.ResponseWriter, data 
 }
 
 func fitHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
-	chat := GetChat(ctx, message.Chat.ID)
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
 		return

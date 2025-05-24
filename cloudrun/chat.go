@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/datastore"
+	"go.yhsif.com/ctxslog"
 )
 
 const (
@@ -134,7 +135,7 @@ func (e *EntityChatToken) Delete(ctx context.Context) {
 }
 
 // GetChat gets an entity from db.
-func GetChat(ctx context.Context, id int64) *EntityChatToken {
+func GetChat(ctx context.Context, id int64) (context.Context, *EntityChatToken) {
 	e := &EntityChatToken{
 		Chat: id,
 	}
@@ -148,7 +149,7 @@ func GetChat(ctx context.Context, id int64) *EntityChatToken {
 				"key", key,
 			)
 		}
-		return nil
+		return ctx, nil
 	}
-	return e
+	return ctxslog.Attach(ctx, "accountType", e.Type), e
 }
