@@ -29,8 +29,6 @@ const (
 	webhookPrefix   = `/w/`
 	epubEndpoint    = `/epub`
 
-	rmDescription = `desktop-windows`
-
 	startCommand = `/start`
 	stopCommand  = `/stop`
 	dirCommand   = `/dir`

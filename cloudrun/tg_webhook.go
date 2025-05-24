@@ -40,17 +40,13 @@ const (
 
 	startExplain = `ℹ️
 
-Please add one of "rm" (for reMarkable account), "kindle" (for kindle and other emails), or "dropbox" (for Dropbox account) after "` + startCommand + ` " and follow instructions there.`
+Please add one of "kindle" (for kindle and other emails) or "dropbox" (for Dropbox account) after "` + startCommand + ` " and follow instructions there.`
 
-	startExplainRM = `ℹ️
+	warnRM = `⚠
 
-To link your reMarkable account, go to https://my.remarkable.com/device/desktop/connect, copy the 8-digit code, and come back to type "` + startCommand + ` rm <8-digit code>".
+reMarkable Cloud API is no longer supported, it likely doesn't really work even if the API call shows success.
 
-There are also known issues/limitations on direct reMarkable cloud support, you might want to use Dropbox integration instead.
-See https://b.yuxuan.org/url2epub-dropbox & https://b.yuxuan.org/url2epub-kindle for more details.`
-	startSuccessRM = `✅ Successfully linked your reMarkable account! It should appear as a "%s" device registered around %s in your account (https://my.remarkable.com/device/desktop).
-By default all epubs are sent to your root directory. To set a different one, use ` + dirCommand + ` command. (Note that if you have a lot of files stored ` + dirCommand + ` command could be very slow or unable to success).
-You can also use ` + fontCommand + ` to set the default font on the created epub files.`
+reMarkable users are advised to switch to use dropbox integration instead (use "` + startCommand + `" dropbox")`
 
 	startExplainKindle = `ℹ️
 
@@ -219,6 +215,7 @@ func handleURL(
 		slog.WarnContext(ctx, "handleURL: chat type = 0")
 		fallthrough
 	case AccountTypeRM:
+		sendReplyMessage(ctx, nil, message, warnRM, true, nil)
 		uploadRM(ctx, w, message, chat, url, id, title, data, reply)
 
 	case AccountTypeDropbox:
@@ -477,10 +474,6 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 		}
 		return "", false
 	}
-	if payload, ok := checkPrefix("rm"); ok {
-		startRM(ctx, w, message, payload)
-		return
-	}
 	if payload, ok := checkPrefix("kindle"); ok {
 		startKindle(ctx, w, message, payload)
 		return
@@ -491,49 +484,6 @@ func startHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mes
 	}
 
 	replyMessage(ctx, w, message, startExplain, true, nil)
-}
-
-func startRM(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, token string) {
-	if token == "" {
-		replyMessage(ctx, w, message, startExplainRM, true, nil)
-		return
-	}
-	client, err := rmapi.Register(ctx, rmapi.RegisterArgs{
-		Token:       token,
-		Description: rmDescription,
-	})
-	if err != nil {
-		slog.ErrorContext(
-			ctx,
-			"startHandler: Unable to register",
-			"err", err,
-		)
-		replyMessage(ctx, w, message, fmt.Sprintf(
-			startErrMsg,
-			token,
-		), true, nil)
-		return
-	}
-	chat := GetChat(ctx, message.Chat.ID)
-	if chat == nil {
-		chat = &EntityChatToken{
-			Chat: message.Chat.ID,
-		}
-	}
-	chat.Type = AccountTypeRM
-	chat.RMToken = client.RefreshToken
-	if err := chat.Save(ctx); err != nil {
-		slog.ErrorContext(
-			ctx,
-			"startHandler: Unable to save chat",
-			"err", err,
-		)
-		replyMessage(ctx, w, message, startSaveErr, true, nil)
-		return
-	}
-	replyMessage(ctx, w, message, fmt.Sprintf(
-		startSuccessRM, rmDescription, time.Now().Format("2006-01-02"),
-	), true, nil)
 }
 
 func startKindle(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, email string) {
