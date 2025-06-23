@@ -33,20 +33,21 @@ deploy:
 	@echo Building $(docker_image)...
 	$(gcloud) builds submit --tag $(docker_image)
 	@echo Pushing to Google Cloud Run...
-	$(gcloud) run deploy --image $(docker_image) \
-		--platform managed \
+	$(gcloud) run deploy $(cloudrunname) \
+		--image=$(docker_image) \
+		--platform=managed \
 		--allow-unauthenticated \
-		--region $(region) $(cloudrunname) \
-		--execution-environment gen2 \
-		--cpu 1 \
-		--memory $(memory_limit_mebibytes)Mi \
-		--update-env-vars GOMEMLIMIT=$(gomemlimit)MiB \
-		--update-env-vars CLOUD_PROJECT_ID=$(project) \
-		--update-env-vars VERSION_TAG=$(version_tag) \
-		--update-env-vars MAILGUN_DOMAIN=$(mailgun_domain) \
-		--update-env-vars MAILGUN_FROM=$(mailgun_from) \
-		--update-env-vars DROPBOX_CLIENT_ID=$(dropbox_client_id) \
-		--set-secrets "SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"
+		--region=$(region) \
+		--execution-environment=gen2 \
+		--cpu=1 \
+		--memory=$(memory_limit_mebibytes)Mi \
+		--update-env-vars=GOMEMLIMIT=$(gomemlimit)MiB \
+		--update-env-vars=CLOUD_PROJECT_ID=$(project) \
+		--update-env-vars=VERSION_TAG=$(version_tag) \
+		--update-env-vars=MAILGUN_DOMAIN=$(mailgun_domain) \
+		--update-env-vars=MAILGUN_FROM=$(mailgun_from) \
+		--update-env-vars=DROPBOX_CLIENT_ID=$(dropbox_client_id) \
+		--set-secrets="SECRET_TELEGRAM_TOKEN=$(telegram_token):latest,SECRET_MAILGUN_TOKEN=$(mailgun_token):latest,SECRET_DROPBOX_TOKEN=$(dropbox_token):latest"
 	rm -Rf vendor
 
 .PHONY: update-secrets
