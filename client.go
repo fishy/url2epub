@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -16,7 +19,42 @@ type lastURLKeyType struct{}
 
 var lastURLKey lastURLKeyType
 
+// Copied from http.DefaultTransport
+var defaultDialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
+
 var client = &http.Client{
+	Transport: &http.Transport{
+		// Copied from http.DefaultTransport except DialContext
+		Proxy:                 http.ProxyFromEnvironment,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+
+		DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
+			defer func(start time.Time) {
+				args := []any{
+					slog.String("network", network),
+					slog.String("addr", addr),
+					slog.Duration("took", time.Since(start)),
+					slog.Any("err", err),
+				}
+				if conn != nil {
+					args = append(
+						args,
+						slog.Any("localAddr", conn.LocalAddr()),
+						slog.Any("remoteAddr", conn.RemoteAddr()),
+					)
+				}
+				slog.DebugContext(ctx, "http client dial returned", args...)
+			}(time.Now())
+			return defaultDialer.DialContext(ctx, network, addr)
+		},
+	},
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 10 {
 			// Copied from:
