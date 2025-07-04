@@ -200,6 +200,10 @@ func handleURL(
 		}
 		return
 	}
+	if title == "" {
+		// Make sure we have a non-empty title
+		title = "[Untitled]"
+	}
 	switch chat.Type {
 	default:
 		// Should not happen, but just in case
