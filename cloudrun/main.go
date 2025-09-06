@@ -29,17 +29,19 @@ const (
 	webhookPrefix   = `/w/`
 	epubEndpoint    = `/epub`
 
-	startCommand = `/start`
-	stopCommand  = `/stop`
-	dirCommand   = `/dir`
-	fontCommand  = `/font`
-	epubCommand  = `/epub`
-	fitCommand   = `/fit`
+	startCommand    = `/start`
+	stopCommand     = `/stop`
+	dirCommand      = `/dir`
+	fontCommand     = `/font`
+	epubCommand     = `/epub`
+	fitCommand      = `/fit`
+	fontSizeCommand = `/fontsize`
 
 	unknownCallback = `🚫 Unknown callback`
 
-	dirIDPrefix = `dir:`
-	fontPrefix  = `font:`
+	dirIDPrefix    = `dir:`
+	fontPrefix     = `font:`
+	fontSizePrefix = `fontsize:`
 
 	dropboxDirPrefix = `dbdir:`
 
@@ -166,6 +168,9 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		case strings.HasPrefix(data, dropboxDirPrefix):
 			dirDropboxCallbackHandler(ctx, w, data, callback)
+
+		case strings.HasPrefix(data, fontSizePrefix):
+			fontSizeCallbackHandler(ctx, w, data, callback)
 		}
 		return
 	}
@@ -192,6 +197,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		dirHandler(ctx, w, update.Message)
 	case text == fontCommand:
 		fontHandler(ctx, w, update.Message)
+	case text == fontSizeCommand:
+		fontSizeHandler(ctx, w, update.Message)
 	}
 }
 

@@ -77,6 +77,7 @@ type EntityChatToken struct {
 	Chat     int64       `datastore:"chat" json:"chat"`
 	Type     AccountType `datastore:"type" json:"type"`
 	FitImage int         `datastore:"fit_image" json:"fit_image"`
+	FontSize string      `datastore:"font_size" json:"font_size"`
 
 	// reMarkable related fields
 	RMToken    string `datastore:"token" json:"token"`
@@ -114,6 +115,14 @@ func (e *EntityChatToken) SaveDatastore(ctx context.Context) error {
 	key := e.datastoreKey()
 	_, err := dsClient.Put(ctx, key, e)
 	return err
+}
+
+// GetFontSize gets the saved font size for display
+func (e *EntityChatToken) GetFontSize() string {
+	if e.FontSize == "" {
+		return "100%"
+	}
+	return e.FontSize
 }
 
 // Save saves this entity into datastore

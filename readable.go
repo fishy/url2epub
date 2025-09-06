@@ -168,6 +168,10 @@ type ReadableArgs struct {
 	//
 	// <=0 to disable this check (always use first article node if found).
 	MinArticleNodes int
+
+	// Extra nodes to be inserted under <head />. For example a style node to
+	// apply global font size.
+	ExtraHeadNodes []*html.Node
 }
 
 // Readable strips node n into a readable one, with all images downloaded and
@@ -234,6 +238,10 @@ func (n *Node) Readable(ctx context.Context, args ReadableArgs) (*html.Node, map
 				},
 			},
 		})
+	}
+
+	for _, node := range args.ExtraHeadNodes {
+		head.AppendChild(node)
 	}
 
 	var body *html.Node

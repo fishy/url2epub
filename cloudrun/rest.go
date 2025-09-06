@@ -9,9 +9,13 @@ import (
 	"net/http"
 	neturl "net/url"
 	"strconv"
+	"strings"
+	"text/template"
 	"time"
 
 	"go.yhsif.com/ctxslog"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"go.yhsif.com/url2epub"
 )
@@ -22,6 +26,7 @@ const (
 	queryFit                  = "fit"
 	queryLang                 = "lang"
 	queryPassthroughUserAgent = "passthrough-user-agent"
+	queryFontSize             = "font-size"
 )
 
 const minArticleNodes = 20
@@ -43,7 +48,7 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 		userAgent = r.Header.Get("user-agent")
 		ctx = ctxslog.Attach(ctx, "userAgent", userAgent)
 	}
-	_, title, data, err := getEpub(ctx, url, userAgent, r.FormValue(queryLang), gray, fit)
+	_, title, data, err := getEpub(ctx, url, userAgent, r.FormValue(queryLang), gray, fit, r.FormValue(queryFontSize))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -57,9 +62,33 @@ func restEpubHandler(w http.ResponseWriter, r *http.Request) {
 	data.WriteTo(w)
 }
 
+var fontSizeStyleTmpl = template.Must(template.New("fontSize").Parse(`
+html {
+	font-size: {{.Size}};
+}
+`))
+
+func fontSizeStyleNodes(size string) []*html.Node {
+	if size == "" {
+		return nil
+	}
+	node := &html.Node{
+		Type:     html.ElementNode,
+		DataAtom: atom.Style,
+		Data:     atom.Style.String(),
+	}
+	var data strings.Builder
+	fontSizeStyleTmpl.Execute(&data, struct{ Size string }{Size: size})
+	node.AppendChild(&html.Node{
+		Type: html.TextNode,
+		Data: data.String(),
+	})
+	return []*html.Node{node}
+}
+
 var errUnsupportedURL = errors.New("unsupported URL")
 
-func getEpub(ctx context.Context, url string, ua string, lang string, gray bool, fit int) (id, title string, data *bytes.Buffer, err error) {
+func getEpub(ctx context.Context, url string, ua string, lang string, gray bool, fit int, fontSize string) (id, title string, data *bytes.Buffer, err error) {
 	if ua == "" {
 		ua = defaultUserAgent
 	}
@@ -107,6 +136,7 @@ func getEpub(ctx context.Context, url string, ua string, lang string, gray bool,
 		Grayscale:       gray,
 		FitImage:        fit,
 		MinArticleNodes: minArticleNodes,
+		ExtraHeadNodes:  fontSizeStyleNodes(fontSize),
 	})
 	if err != nil {
 		return "", "", nil, fmt.Errorf(

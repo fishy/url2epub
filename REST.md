@@ -27,6 +27,7 @@ Generate an epub file from the given URL.
 | `fit` | int | Downscale images to fit in fit x fit if needed, only used when gray is set to true. |
 | `lang` | string | Override the language detected from the url for epub. |
 | `passthrough-user-agent` | [bool][bool] | Use the same `User-Agent` from the original request. |
+| `font-size` | string | Global font size scaling, for example `50%`. |
 
 #### Response
 

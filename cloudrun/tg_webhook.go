@@ -76,6 +76,12 @@ You can now go to https://my.remarkable.com/device/desktop to revoke access if i
 	dirSuccessMsg   = `✅ Your new directory "%s" is saved.`
 	dirWrongAccount = dirCommand + ` is not supported by your account.`
 
+	fontSizeMsg         = `Please choose a global font size scaling for the epub (current: %s)`
+	fontSizeSaveErr     = `🚫 Failed to save global font size scaling. Please try again later.`
+	fontSizeCallbackErr = `🚫 Failed to set global font size scaling. Please try ` + fontSizeCommand + ` command again later.`
+	fontSizeSuccess     = `✅ Saved!`
+	fontSizeSuccessMsg  = `✅ Your new global font size scaling "%s" is saved.`
+
 	noURLmsg             = `🚫 No URL found in message.`
 	unsupportedURLmsg    = `⚠️ Unsupported URL: "%s"`
 	failedEpubMsg        = `🚫 Failed to generate epub from URL: "%s"`
@@ -178,7 +184,7 @@ func handleURL(
 		reply = sendReplyMessage
 	}
 	start := time.Now()
-	id, title, data, err := getEpub(ctx, url, defaultUserAgent, lang, true, chat.FitImage)
+	id, title, data, err := getEpub(ctx, url, defaultUserAgent, lang, true, chat.FitImage, chat.FontSize)
 	if !first {
 		slog.DebugContext(ctx, "Retried with archive.is", "err", err, "url", url, "took", time.Since(start))
 	}
@@ -427,6 +433,7 @@ func uploadDropbox(
 }
 
 func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
+	ctx, chat := GetChat(ctx, message.Chat.ID)
 	url := firstURLInMessage(ctx, message)
 	if url == "" && message.ReplyTo != nil {
 		url = firstURLInMessage(ctx, message.ReplyTo)
@@ -443,6 +450,11 @@ func epubHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Mess
 	params := make(neturl.Values)
 	params.Set(queryURL, url)
 	params.Set(queryGray, "1")
+	if chat != nil {
+		if size := chat.FontSize; size != "" {
+			params.Set(queryFontSize, size)
+		}
+	}
 	if lang := firstLangInMessage(message); lang != "" {
 		params.Set(queryLang, lang)
 	} else if u, err := neturl.Parse(url); err == nil {
@@ -912,4 +924,97 @@ func prettySize(size int) string {
 		s = fmt.Sprintf("%.1f %s", n, unit)
 	}
 	return s
+}
+
+var fontSizeChoices = []string{
+	"50%",
+	"75%",
+	"100%",
+	"125%",
+	"150%",
+	"200%",
+}
+
+func fontSizeHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
+	ctx, chat := GetChat(ctx, message.Chat.ID)
+	if chat == nil {
+		replyMessage(ctx, w, message, notStartedMsg, true, nil)
+		return
+	}
+	choices := make([][]tgbot.InlineKeyboardButton, 0, len(fontSizeChoices))
+	for _, size := range fontSizeChoices {
+		choices = append(choices, []tgbot.InlineKeyboardButton{
+			{
+				Text: size,
+				Data: fontSizePrefix + size,
+			},
+		})
+	}
+	replyMessage(
+		ctx,
+		w,
+		message,
+		fmt.Sprintf(fontSizeMsg, chat.GetFontSize()),
+		true, // quote
+		&tgbot.InlineKeyboardMarkup{
+			InlineKeyboard: choices,
+		},
+	)
+}
+
+func fontSizeCallbackHandler(ctx context.Context, w http.ResponseWriter, data string, callback *tgbot.CallbackQuery) {
+	if callback.Message == nil {
+		slog.ErrorContext(
+			ctx,
+			"fontSizeCallbackHandler: Bad callback",
+			"data", data,
+			"callback", callback,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, fontSizeCallbackErr)
+		reply200(w)
+		return
+	}
+	ctx, chat := GetChat(ctx, callback.Message.Chat.ID)
+	if chat == nil {
+		slog.ErrorContext(
+			ctx,
+			"fontSizeCallbackHandler: Bad callback",
+			"data", data,
+			"chat", callback.Message.Chat.ID,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, notStartedMsg)
+		reply200(w)
+		return
+	}
+	size := strings.TrimPrefix(data, fontSizePrefix)
+	if size == "100%" {
+		size = ""
+	}
+	chat.FontSize = size
+	if err := chat.Save(ctx); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"fontSizeCallbackHandler: Unable to save chat",
+			"err", err,
+		)
+		getBot().ReplyCallback(ctx, callback.ID, fontSizeSaveErr)
+		reply200(w)
+		return
+	}
+	if _, err := getBot().ReplyCallback(ctx, callback.ID, fontSizeSuccess); err != nil {
+		slog.ErrorContext(
+			ctx,
+			"fontSizeCallbackHandler: Unable to reply to callback",
+			"err", err,
+		)
+	}
+	reply200(w)
+
+	getBot().SendMessage(
+		ctx,
+		callback.Message.Chat.ID,
+		fmt.Sprintf(fontSizeSuccessMsg, chat.GetFontSize()),
+		&callback.Message.ID,
+		nil,
+	)
 }
