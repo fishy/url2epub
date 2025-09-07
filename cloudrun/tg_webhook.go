@@ -935,10 +935,18 @@ var fontSizeChoices = []string{
 	"200%",
 }
 
-func fontSizeHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message) {
+func fontSizeHandler(ctx context.Context, w http.ResponseWriter, message *tgbot.Message, text string) {
 	ctx, chat := GetChat(ctx, message.Chat.ID)
 	if chat == nil {
 		replyMessage(ctx, w, message, notStartedMsg, true, nil)
+		return
+	}
+	size := strings.TrimSpace(strings.TrimPrefix(text, fontSizeCommand))
+	if unquoted, err := strconv.Unquote(size); err == nil {
+		size = strings.TrimSpace(unquoted)
+	}
+	if size != "" {
+		saveFontSize(ctx, w, chat, size, message.Chat.ID, &message.ID, nil /* callbackID */)
 		return
 	}
 	choices := make([][]tgbot.InlineKeyboardButton, 0, len(fontSizeChoices))
@@ -987,6 +995,10 @@ func fontSizeCallbackHandler(ctx context.Context, w http.ResponseWriter, data st
 		return
 	}
 	size := strings.TrimPrefix(data, fontSizePrefix)
+	saveFontSize(ctx, w, chat, size, callback.Message.Chat.ID, &callback.Message.ID, &callback.ID)
+}
+
+func saveFontSize(ctx context.Context, w http.ResponseWriter, chat *EntityChatToken, size string, chatID int64, replyTo *int64, callbackID *string) {
 	if size == "100%" {
 		size = ""
 	}
@@ -994,27 +1006,39 @@ func fontSizeCallbackHandler(ctx context.Context, w http.ResponseWriter, data st
 	if err := chat.Save(ctx); err != nil {
 		slog.ErrorContext(
 			ctx,
-			"fontSizeCallbackHandler: Unable to save chat",
+			"saveFontSize: Unable to save chat",
 			"err", err,
 		)
-		getBot().ReplyCallback(ctx, callback.ID, fontSizeSaveErr)
+		if callbackID != nil {
+			getBot().ReplyCallback(ctx, *callbackID, fontSizeSaveErr)
+		} else {
+			getBot().SendMessage(
+				ctx,
+				chatID,
+				fontSizeSaveErr,
+				replyTo,
+				nil,
+			)
+		}
 		reply200(w)
 		return
 	}
-	if _, err := getBot().ReplyCallback(ctx, callback.ID, fontSizeSuccess); err != nil {
-		slog.ErrorContext(
-			ctx,
-			"fontSizeCallbackHandler: Unable to reply to callback",
-			"err", err,
-		)
+	if callbackID != nil {
+		if _, err := getBot().ReplyCallback(ctx, *callbackID, fontSizeSuccess); err != nil {
+			slog.ErrorContext(
+				ctx,
+				"saveFontSize: Unable to reply to callback",
+				"err", err,
+			)
+		}
 	}
 	reply200(w)
 
 	getBot().SendMessage(
 		ctx,
-		callback.Message.Chat.ID,
+		chatID,
 		fmt.Sprintf(fontSizeSuccessMsg, chat.GetFontSize()),
-		&callback.Message.ID,
+		replyTo,
 		nil,
 	)
 }

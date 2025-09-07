@@ -189,6 +189,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		startHandler(ctx, w, update.Message, text)
 	case strings.HasPrefix(text, fitCommand):
 		fitHandler(ctx, w, update.Message, text)
+	case strings.HasPrefix(text, fontSizeCommand):
+		fontSizeHandler(ctx, w, update.Message, text)
 	case strings.HasPrefix(text, epubCommand):
 		epubHandler(ctx, w, update.Message)
 	case text == stopCommand:
@@ -197,8 +199,6 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		dirHandler(ctx, w, update.Message)
 	case text == fontCommand:
 		fontHandler(ctx, w, update.Message)
-	case text == fontSizeCommand:
-		fontSizeHandler(ctx, w, update.Message)
 	}
 }
 
