@@ -1,6 +1,6 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-go.yhsif.com/immutable v1.0.0-rc1 h1:9uTL/8DYRhi4RbEi4nSkqcszjB8sBuxcgD+3A91ZkUw=
-go.yhsif.com/immutable v1.0.0-rc1/go.mod h1:u1Qf6g5SDBaTnKE+Serz1dO6H2mzOPYpMeCu/qSB5PQ=
-golang.org/x/net v0.43.0 h1:lat02VYK2j4aLzMzecihNvTlJNQUq316m2Mr9rnM6YE=
-golang.org/x/net v0.43.0/go.mod h1:vhO1fvI4dGsIjh73sWfUVjj3N7CA9WkKJNQm2svM6Jg=
+go.yhsif.com/immutable v1.0.0 h1:V7f0dFFqCauZgq4ykOGl59Is0VmMILax/T7EjUCuQp4=
+go.yhsif.com/immutable v1.0.0/go.mod h1:u1Qf6g5SDBaTnKE+Serz1dO6H2mzOPYpMeCu/qSB5PQ=
+golang.org/x/net v0.45.0 h1:RLBg5JKixCy82FtLJpeNlVM0nrSqpCRYzVU1n8kj0tM=
+golang.org/x/net v0.45.0/go.mod h1:ECOoLqd5U3Lhyeyo/QDCEVQ4sNgYsqvCZ722XogGieY=
