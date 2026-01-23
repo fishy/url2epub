@@ -422,18 +422,13 @@ func (n *Node) countRecursive(minCount int) (count int, hasMin bool) {
 		for c := range n.Children() {
 			subCount, hit := c.countRecursive(minCount)
 			if hit {
-				hasMin = hit
-				break
+				return 0, true
 			}
 			count += subCount
 			minCount -= subCount
 			if minCount <= 0 {
-				hasMin = hit
-				break
+				return 0, true
 			}
-		}
-		if hasMin {
-			return 0, true
 		}
 		return count, false
 	}

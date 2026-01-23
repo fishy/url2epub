@@ -25,21 +25,14 @@ func (n Node) AsNode() html.Node {
 	return html.Node(n)
 }
 
-// ForEachChild calls f on each of n's children.
-//
-// If f returns false, ForEachChild stops the iteration.
-func (n Node) ForEachChild(f func(child *Node) bool) {
-	for c := n.AsNode().FirstChild; c != nil; c = c.NextSibling {
-		if !f(FromNode(c)) {
-			return
-		}
-	}
-}
-
 // Children returns an iterator for all n's children.
 func (n Node) Children() iter.Seq[*Node] {
 	return func(yield func(*Node) bool) {
-		n.ForEachChild(yield)
+		for c := n.AsNode().FirstChild; c != nil; c = c.NextSibling {
+			if !yield(FromNode(c)) {
+				return
+			}
+		}
 	}
 }
 
@@ -55,14 +48,12 @@ func (n *Node) FindFirstAtomNode(a atom.Atom) *Node {
 	if node := n.AsNode(); node.Type == html.ElementNode && node.DataAtom == a {
 		return n
 	}
-	var found *Node
 	for c := range n.Children() {
 		if ret := c.FindFirstAtomNode(a); ret != nil {
-			found = ret
-			break
+			return ret
 		}
 	}
-	return found
+	return nil
 }
 
 // IsAMP returns true if root is an AMP html document.
@@ -99,19 +90,16 @@ func (n *Node) GetAMPurl() string {
 	if head == nil {
 		return ""
 	}
-	var found string
 	for cc := range head.Children() {
 		c := cc.AsNode()
 		if c.Type != html.ElementNode || c.DataAtom != atom.Link {
 			continue
 		}
-		m := buildAttrMap(&c)
-		if m["rel"] == "amphtml" {
-			found = m["href"]
-			break
+		if m := buildAttrMap(&c); m["rel"] == "amphtml" {
+			return m["href"]
 		}
 	}
-	return found
+	return ""
 }
 
 // GetTitle returns the title of the document, if any.
@@ -133,14 +121,12 @@ func (n *Node) GetTitle() (title string) {
 		if c.Type != html.ElementNode || c.DataAtom != atom.Meta {
 			continue
 		}
-		m := buildAttrMap(&c)
-		if m["property"] == "og:title" {
-			title = m["content"]
+		if m := buildAttrMap(&c); m["property"] == "og:title" {
+			if t := m["content"]; t != "" {
+				return t
+			}
 			break
 		}
-	}
-	if title != "" {
-		return title
 	}
 
 	titleNode := head.FindFirstAtomNode(atom.Title)
