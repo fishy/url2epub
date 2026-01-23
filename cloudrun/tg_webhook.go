@@ -20,6 +20,7 @@ import (
 
 	"go.yhsif.com/ctxslog"
 
+	//lint:ignore SA1019 we haven't dropped rm support yet
 	"go.yhsif.com/url2epub/rmapi"
 	"go.yhsif.com/url2epub/tgbot"
 
