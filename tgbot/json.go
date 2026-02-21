@@ -23,8 +23,8 @@ type Update struct {
 // Message is a telegram message.
 type Message struct {
 	ID   int64  `json:"message_id,omitempty"`
-	From User   `json:"from,omitempty"`
-	Chat Chat   `json:"chat,omitempty"`
+	From User   `json:"from,omitzero"`
+	Chat Chat   `json:"chat,omitzero"`
 	Date int64  `json:"date,omitempty"`
 	Text string `json:"text,omitempty"`
 
@@ -112,7 +112,7 @@ type NotSupportedType struct {
 	ID   string `json:"id,omitempty"`
 	Date int64  `json:"date,omitempty"`
 
-	Chat Chat  `json:"chat,omitempty"`
+	Chat Chat  `json:"chat,omitzero"`
 	From *User `json:"from,omitempty"`
 	User *User `json:"user,omitempty"`
 }

@@ -248,10 +248,7 @@ func DropboxContentHash(data []byte) string {
 
 	sum := sha256.New()
 	for i := 0; i < len(data); i += blockSize {
-		end := i + blockSize
-		if end > len(data) {
-			end = len(data)
-		}
+		end := min(i+blockSize, len(data))
 		block := sha256.Sum256(data[i:end])
 		sum.Write(block[:])
 	}

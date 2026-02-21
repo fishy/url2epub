@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"sort"
 	"strconv"
@@ -275,7 +276,7 @@ func (c *Client) DownloadRoot(ctx context.Context) (entries []IndexEntry, genera
 }
 
 var bufPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new(bytes.Buffer)
 	},
 }
@@ -304,7 +305,7 @@ func (c *Client) Upload15(ctx context.Context, content io.Reader) (path string, 
 	return path, size, c.upload15(ctx, payload, buf, nil)
 }
 
-func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content io.Reader, extraHeaders map[string]string) error {
+func (c *Client) upload15(ctx context.Context, apiPayload any, content io.Reader, extraHeaders map[string]string) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
@@ -327,9 +328,7 @@ func (c *Client) upload15(ctx context.Context, apiPayload interface{}, content i
 	if err := payload.Err(); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: %w", err)
 	}
-	for k, v := range extraHeaders {
-		payload.Headers[k] = v
-	}
+	maps.Copy(payload.Headers, extraHeaders)
 	req, err = payload.ToRequest(ctx, content)
 	if err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to create GCS upload request: %w, payload: %+v", err, payload)
