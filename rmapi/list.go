@@ -2,7 +2,7 @@ package rmapi
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"path"
@@ -62,7 +62,7 @@ func (c *Client) ListDirs(ctx context.Context) (map[string]string, error) {
 			var meta Metadata
 			if err := func() error {
 				defer url2epub.DrainAndClose(resp.Body)
-				return json.NewDecoder(resp.Body).Decode(&meta)
+				return json.UnmarshalRead(resp.Body, &meta)
 			}(); err != nil {
 				slog.ErrorContext(
 					ctx,

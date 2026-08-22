@@ -3,7 +3,7 @@ package rmapi
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"strings"
@@ -45,7 +45,7 @@ func (c *Client) Upload(ctx context.Context, args UploadArgs) error {
 		LastModified: TimestampMillisecond(now),
 	}
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(meta); err != nil {
+	if err := json.MarshalWrite(&buf, meta); err != nil {
 		return fmt.Errorf("rmapi.Client.Upload: failed to json encode for %s: %w", metaName, err)
 	}
 	metaPath, metaSize, err := c.Upload15(ctx, &buf)

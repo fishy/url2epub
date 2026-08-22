@@ -12,8 +12,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"uuid"
 
-	"github.com/google/uuid"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
@@ -158,11 +158,7 @@ func wrapEpubXMLnsNode(root *html.Node) *html.Node {
 
 // Epub creates an Epub 3.0 file from given content.
 func Epub(args EpubArgs) (id string, err error) {
-	randomID, err := uuid.NewRandom()
-	if err != nil {
-		return "", fmt.Errorf("epub: unable to generate uuid: %w", err)
-	}
-
+	randomID := uuid.NewV4()
 	z := zip.NewWriter(args.Dest)
 	defer func() {
 		if closeErr := z.Close(); closeErr != nil {

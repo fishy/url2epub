@@ -6,7 +6,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -100,9 +102,15 @@ var responseNonHeaderKeys = immutable.SetLiteral(
 // UnmarshalJSON implements json.Unmarshaler.
 func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 	var m map[string]any
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if err := decoder.Decode(&m); err != nil {
+	if err := json.UnmarshalRead(bytes.NewReader(data), &m, json.WithUnmarshalers(
+		json.UnmarshalFromFunc(func(dec *jsontext.Decoder, val *any) error {
+			if dec.PeekKind() == jsontext.KindNumber {
+				// Unmarshal all numbers as jsontext.Value to be parsed later
+				*val = jsontext.Value(nil)
+			}
+			return errors.ErrUnsupported
+		}),
+	)); err != nil {
 		return err
 	}
 
@@ -126,8 +134,8 @@ func (resp *APIResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if n, ok := m[APIResponseMaxUploadSizeBytes].(json.Number); ok {
-		if i, err := n.Int64(); err == nil && i > 0 {
+	if n, ok := m[APIResponseMaxUploadSizeBytes].(jsontext.Value); ok {
+		if i, err := strconv.ParseUint(string(n), 10, 64); err == nil && i > 0 {
 			resp.Headers["x-goog-content-length-range"] = fmt.Sprintf("0,%d", i)
 		}
 	}
@@ -165,7 +173,7 @@ func (c *Client) Download15(ctx context.Context, path string) (*http.Response, e
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
-	if err := json.NewEncoder(buf).Encode(payload); err != nil {
+	if err := json.MarshalWrite(buf, payload); err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to json encode api request: %w", err)
 	}
 	req, err := http.NewRequest(http.MethodPost, APIDownload, buf)
@@ -178,7 +186,7 @@ func (c *Client) Download15(ctx context.Context, path string) (*http.Response, e
 	}
 	defer url2epub.DrainAndClose(resp.Body)
 	var respPayload APIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+	if err := json.UnmarshalRead(resp.Body, &respPayload); err != nil {
 		return nil, fmt.Errorf("rmapi.Client.Download15: failed to json decode api response: %w", err)
 	}
 	req, err = respPayload.ToRequest(ctx, nil)
@@ -255,6 +263,9 @@ func (c *Client) DownloadIndex(ctx context.Context, path string) ([]IndexEntry, 
 		}
 		entries = append(entries, entry)
 	}
+	if err := scanner.Err(); err != nil {
+		slog.ErrorContext(ctx, "Scanner failed", "err", err)
+	}
 	return entries, nil
 }
 
@@ -309,7 +320,7 @@ func (c *Client) upload15(ctx context.Context, apiPayload any, content io.Reader
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
-	if err := json.NewEncoder(buf).Encode(apiPayload); err != nil {
+	if err := json.MarshalWrite(buf, apiPayload); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to json encode api request: %w", err)
 	}
 	req, err := http.NewRequest(http.MethodPost, APIUpload, buf)
@@ -322,7 +333,7 @@ func (c *Client) upload15(ctx context.Context, apiPayload any, content io.Reader
 	}
 	defer url2epub.DrainAndClose(resp.Body)
 	var payload APIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := json.UnmarshalRead(resp.Body, &payload); err != nil {
 		return fmt.Errorf("rmapi.Client.upload15: failed to json decode api response: %w", err)
 	}
 	if err := payload.Err(); err != nil {
@@ -396,7 +407,7 @@ func (c *Client) syncComplete(ctx context.Context, generation int64) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
-	if err := json.NewEncoder(buf).Encode(payload); err != nil {
+	if err := json.MarshalWrite(buf, payload); err != nil {
 		return fmt.Errorf("rmapi.Client.syncComplete: failed to json encode request payload: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, APISyncComplete, buf)

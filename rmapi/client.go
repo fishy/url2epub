@@ -3,12 +3,11 @@ package rmapi
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/google/uuid"
+	"uuid"
 
 	"go.yhsif.com/url2epub"
 )
@@ -39,17 +38,14 @@ type registerPayload struct {
 //
 // Upon success, it returns a *Client with RefreshToken set.
 func Register(ctx context.Context, args RegisterArgs) (*Client, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("rmapi.Register: unable to generate uuid: %w", err)
-	}
+	id := uuid.NewV4()
 	data := registerPayload{
 		Token:       args.Token,
 		Description: args.Description,
 		ID:          id.String(),
 	}
 	payload := new(bytes.Buffer)
-	if err := json.NewEncoder(payload).Encode(data); err != nil {
+	if err := json.MarshalWrite(payload, data); err != nil {
 		return nil, fmt.Errorf("rmapi.Register: unable to encode json payload: %w", err)
 	}
 

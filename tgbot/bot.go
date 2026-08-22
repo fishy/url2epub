@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/sha512"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"log/slog"
@@ -126,7 +126,7 @@ func (b *Bot) PostRequestJSON(
 ) (code int, err error) {
 	buf := getBufFromPool()
 	defer returnBufToPool(buf)
-	if err := json.NewEncoder(buf).Encode(payload); err != nil {
+	if err := json.MarshalWrite(buf, payload); err != nil {
 		return 0, fmt.Errorf("tgbot.Bot.PostRequestJSON: failed to json encode payload: %w", err)
 	}
 	return b.postRequest(ctx, endpoint, buf, jsonContentType)
@@ -148,7 +148,7 @@ func (b *Bot) SendMessage(
 	}
 	if markup != nil {
 		var sb strings.Builder
-		if err := json.NewEncoder(&sb).Encode(*markup); err != nil {
+		if err := json.MarshalWrite(&sb, *markup); err != nil {
 			return 0, fmt.Errorf("tgbot.SendMessage: failed to create InlineKeyboardMarkup: %w", err)
 		}
 		values.Add("reply_markup", sb.String())

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -137,7 +137,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var update tgbot.Update
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
+	if err := json.UnmarshalRead(r.Body, &update); err != nil {
 		slog.ErrorContext(
 			ctx,
 			"Unable to decode json",

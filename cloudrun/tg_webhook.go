@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -359,8 +359,7 @@ func handleDropboxAuthError(
 
 			var sb strings.Builder
 			sb.WriteString(dropboxFailure)
-			var dae DropboxAPIError
-			if errors.As(err, &dae) {
+			if dae, ok := errors.AsType[DropboxAPIError](err); ok {
 				sb.WriteString(fmt.Sprintf(" This error detail might be helpful: %q.", dae.Summary))
 				if dae.Tag == "invalid_grant" {
 					sb.WriteString(" ")
@@ -890,7 +889,7 @@ func replyMessage(
 	reply := generateReplyMessage(orig, msg, quote, markup)
 	reply.Method = "sendMessage"
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
+	json.MarshalWrite(w, reply)
 }
 
 func sendReplyMessage(

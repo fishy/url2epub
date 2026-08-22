@@ -557,11 +557,9 @@ func (n *Node) readableRecursive(
 				imgMapping[src] = filename
 				reader := new(io.Reader)
 				images[filename] = reader
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					downloadImage(ctx, srcURL, userAgent, reader, gray, fitImage)
-				}()
+				})
 			}
 			// Remove srcset if they are there
 			if srcsetIndex >= 0 {

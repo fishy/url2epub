@@ -5,7 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"log/slog"
@@ -34,7 +35,7 @@ func (dae *DropboxAPIError) UnmarshalJSON(data []byte) error {
 		Summary     string `json:"error_summary"`
 		Description string `json:"error_description"`
 
-		Err json.RawMessage `json:"error"`
+		Err jsontext.Value `json:"error"`
 	}
 	if err := json.Unmarshal(data, &val); err != nil {
 		return err
@@ -70,16 +71,15 @@ func handleDropboxResponse(resp *http.Response, v any) error {
 		resp.Body.Close()
 	}()
 
-	decoder := json.NewDecoder(resp.Body)
 	if resp.StatusCode >= 400 {
 		dae := DropboxAPIError{Code: resp.StatusCode}
-		if err := decoder.Decode(&dae); err != nil {
+		if err := json.UnmarshalRead(resp.Body, &dae); err != nil {
 			return fmt.Errorf("handleDropboxResponse: failed to json decode error response with code=%d: %w", resp.StatusCode, err)
 		}
 		return fmt.Errorf("handleDropboxResponse: %w", dae)
 	}
 
-	if err := decoder.Decode(v); err != nil {
+	if err := json.UnmarshalRead(resp.Body, v); err != nil {
 		return fmt.Errorf("handleDropboxResponse: failed to json decode response with code=%d: %w", resp.StatusCode, err)
 	}
 	return nil
@@ -98,7 +98,7 @@ func (c *DropboxClient) do(ctx context.Context, url string, req any) (*http.Resp
 		defer func() {
 			bufPool.Put(buf)
 		}()
-		if err := json.NewEncoder(buf).Encode(req); err != nil {
+		if err := json.MarshalWrite(buf, req); err != nil {
 			return nil, fmt.Errorf("DropboxClient.do: failed to json encode request: %w", err)
 		}
 		body = buf
@@ -211,7 +211,7 @@ type uploadResult struct {
 func (c *DropboxClient) Upload(ctx context.Context, path string, file *bytes.Buffer) error {
 	hash := DropboxContentHash(file.Bytes())
 	var sb strings.Builder
-	if err := json.NewEncoder(&sb).Encode(uploadRequest{
+	if err := json.MarshalWrite(&sb, uploadRequest{
 		Path:        path,
 		ContentHash: hash,
 
