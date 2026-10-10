@@ -31,7 +31,7 @@ gomemlimit=$(shell expr $(memory_limit_mebibytes) / 5 \* 4)
 deploy:
 	go mod vendor
 	@echo Building $(docker_image)...
-	$(gcloud) builds submit --tag $(docker_image)
+	$(gcloud) builds submit --worker-release=regular --tag=$(docker_image)
 	@echo Pushing to Google Cloud Run...
 	$(gcloud) run deploy $(cloudrunname) \
 		--image=$(docker_image) \
